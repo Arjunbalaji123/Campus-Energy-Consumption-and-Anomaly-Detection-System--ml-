@@ -1,0 +1,140 @@
+{
+  "dataset_metrics": {
+    "total_records": 6482,
+    "building_count": 6,
+    "buildings": [
+      "CIT-MAIN",
+      "CIT-IT",
+      "CIT-ACAD",
+      "CIT-LAB",
+      "CIT-LIB",
+      "CIT-WORK"
+    ],
+    "start_time": "2026-08-15T00:00:00",
+    "end_time": "2026-10-20T10:00:00"
+  },
+  "missing_values_percentage": {
+    "id": 0.0,
+    "timestamp": 0.0,
+    "energy_kwh": 0.0,
+    "outdoor_temp_c": 0.0,
+    "relative_humidity": 0.0,
+    "occupancy_count": 0.0,
+    "day_type": 0.0,
+    "operating_status": 0.0,
+    "hvac_status": 0.0,
+    "is_synthetic": 0.0,
+    "notes": 99.91,
+    "building_code": 0.0,
+    "building_name": 0.0,
+    "building_category": 0.0,
+    "floor_area_sqm": 0.0,
+    "max_capacity": 0.0,
+    "has_hvac": 0.0
+  },
+  "building_consumption_stats": {
+    "CIT-MAIN": {
+      "mean_kwh": 37.15,
+      "std_kwh": 20.3,
+      "median_kwh": 25.28,
+      "min_kwh": 15.75,
+      "max_kwh": 80.4
+    },
+    "CIT-IT": {
+      "mean_kwh": 58.09,
+      "std_kwh": 26.71,
+      "median_kwh": 41.94,
+      "min_kwh": 30.33,
+      "max_kwh": 168.5
+    },
+    "CIT-ACAD": {
+      "mean_kwh": 27.52,
+      "std_kwh": 13.3,
+      "median_kwh": 20.8,
+      "min_kwh": 12.6,
+      "max_kwh": 132.0
+    },
+    "CIT-LAB": {
+      "mean_kwh": 43.37,
+      "std_kwh": 24.48,
+      "median_kwh": 28.64,
+      "min_kwh": 17.5,
+      "max_kwh": 98.0
+    },
+    "CIT-LIB": {
+      "mean_kwh": 36.02,
+      "std_kwh": 17.5,
+      "median_kwh": 28.24,
+      "min_kwh": 14.0,
+      "max_kwh": 74.93
+    },
+    "CIT-WORK": {
+      "mean_kwh": 25.73,
+      "std_kwh": 18.33,
+      "median_kwh": 15.68,
+      "min_kwh": 2.1,
+      "max_kwh": 63.07
+    }
+  },
+  "day_type_breakdown": {
+    "holiday": {
+      "mean": 23.37,
+      "median": 21.56,
+      "count": 144
+    },
+    "weekend": {
+      "mean": 25.48,
+      "median": 22.87,
+      "count": 1872
+    },
+    "working_day": {
+      "mean": 43.69,
+      "median": 39.32,
+      "count": 4466
+    }
+  },
+  "correlations_with_energy_kwh": {
+    "energy_kwh": 1.0,
+    "outdoor_temp_c": 0.582,
+    "occupancy_count": 0.721,
+    "floor_area_sqm": 0.146
+  },
+  "injected_anomalies_detected": [
+    {
+      "timestamp": "2026-08-27T14:00:00",
+      "building_code": "CIT-IT",
+      "energy_kwh": 168.5,
+      "building_median_kwh": 41.94,
+      "deviation_kwh": 126.56,
+      "deviation_pct": 301.8,
+      "notes": "INJECTED_ANOMALY: Weekend HVAC left running at full power with low occupancy."
+    },
+    {
+      "timestamp": "2026-09-09T02:00:00",
+      "building_code": "CIT-LAB",
+      "energy_kwh": 98.0,
+      "building_median_kwh": 28.64,
+      "deviation_kwh": 69.36,
+      "deviation_pct": 242.2,
+      "notes": "INJECTED_ANOMALY: Heavy testing machinery active overnight outside operating hours."
+    },
+    {
+      "timestamp": "2026-09-16T11:00:00",
+      "building_code": "CIT-WORK",
+      "energy_kwh": 2.1,
+      "building_median_kwh": 15.68,
+      "deviation_kwh": -13.58,
+      "deviation_pct": -86.6,
+      "notes": "INJECTED_ANOMALY: Plausible meter failure or tripped main circuit breaker."
+    },
+    {
+      "timestamp": "2026-09-24T14:00:00",
+      "building_code": "CIT-ACAD",
+      "energy_kwh": 132.0,
+      "building_median_kwh": 20.8,
+      "deviation_kwh": 111.2,
+      "deviation_pct": 534.6,
+      "notes": "INJECTED_ANOMALY: Extreme thermal surge in non-HVAC building."
+    }
+  ]
+}
