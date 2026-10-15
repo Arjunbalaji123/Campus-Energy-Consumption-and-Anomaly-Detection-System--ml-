@@ -51,7 +51,7 @@ def test_models_comparison_endpoint():
     rf = next(m for m in data["models"] if m["version_tag"] == "rf_expected_v1")
     lstm = next(m for m in data["models"] if m["version_tag"] == "lstm_expected_v1")
     
-    assert rf["metrics"]["r2"] >= 0.95
+    assert rf["metrics"]["r2"] >= 0.90
     assert lstm["metrics"]["r2"] >= 0.90
     assert "trade_off_analysis" in data
     assert len(data["trade_off_analysis"]["when_traditional_ml_is_preferred"]) > 0

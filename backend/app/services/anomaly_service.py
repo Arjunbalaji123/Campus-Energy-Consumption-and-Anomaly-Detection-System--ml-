@@ -117,7 +117,7 @@ def evaluate_reading_anomalies(
 
     if is_res_anomaly and is_iso_outlier:
         method = "dual"
-        severity = "critical" if (residual_severity == "critical" or iso_score < -0.02) else "warning"
+        severity = "critical"
     elif is_res_anomaly:
         method = "residual"
         severity = residual_severity

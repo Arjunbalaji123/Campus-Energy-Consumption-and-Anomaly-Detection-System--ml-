@@ -13,6 +13,10 @@ BACKEND_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), "../.."))
 DEFAULT_SQLITE_PATH = os.path.join(BACKEND_DIR, "cit_energy.db")
 
 
+DEFAULT_MODEL_DIR = os.path.join(BACKEND_DIR, "ml/saved_models")
+DEFAULT_DATA_DIR = os.path.join(BACKEND_DIR, "ml/data")
+
+
 class Settings(BaseSettings):
     """Application settings loaded from environment or .env file."""
 
@@ -41,8 +45,8 @@ class Settings(BaseSettings):
     ANOMALY_CRITICAL_THRESHOLD: float = 0.50
 
     # Paths
-    MODEL_DIR: str = "./ml/saved_models"
-    DATA_DIR: str = "./ml/data"
+    MODEL_DIR: str = DEFAULT_MODEL_DIR
+    DATA_DIR: str = DEFAULT_DATA_DIR
 
     @property
     def cors_origins(self) -> List[str]:
