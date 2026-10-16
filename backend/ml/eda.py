@@ -17,10 +17,11 @@ from app.core.database import SessionLocal
 from app.models import Building, EnergyReading
 
 
-def load_dataset(use_db: bool = True) -> pd.DataFrame:
-    """Load energy dataset from database or CSV snapshot."""
+def load_dataset(use_db: bool = True, synthetic_only: bool = True) -> pd.DataFrame:
+    """Load energy dataset from database or CSV snapshot, guaranteeing explicit anomaly labels."""
     csv_path = os.path.abspath(os.path.join(os.path.dirname(__file__), "data/synthetic_campus_energy.csv"))
 
+    df = None
     if use_db:
         db = SessionLocal()
         try:
@@ -47,15 +48,37 @@ def load_dataset(use_db: bool = True) -> pd.DataFrame:
                 .join(Building, EnergyReading.building_id == Building.id)
                 .order_by(EnergyReading.timestamp.asc())
             )
+            if synthetic_only:
+                query = query.filter(EnergyReading.is_synthetic == True)
+
             df = pd.read_sql(query.statement, db.bind)
-            if not df.empty:
-                return df
         finally:
             db.close()
 
-    if os.path.exists(csv_path):
-        return pd.read_csv(csv_path, parse_dates=["timestamp"])
-    raise FileNotFoundError("Neither database records nor synthetic_campus_energy.csv could be loaded.")
+    if df is None or df.empty:
+        if os.path.exists(csv_path):
+            df = pd.read_csv(csv_path, parse_dates=["timestamp"])
+            if synthetic_only and "is_synthetic" in df.columns:
+                df = df[df["is_synthetic"] == True].copy()
+        else:
+            raise FileNotFoundError("Neither database records nor synthetic_campus_energy.csv could be loaded.")
+
+    # Ensure timestamp is datetime and sorted chronologically
+    df["timestamp"] = pd.to_datetime(df["timestamp"])
+    df = df.sort_values("timestamp").reset_index(drop=True)
+
+    # Ensure explicit anomaly ground-truth columns are present
+    if "is_anomaly" not in df.columns:
+        df["is_anomaly"] = df["notes"].fillna("").str.contains("INJECTED_ANOMALY", case=False)
+
+    if "anomaly_type" not in df.columns:
+        df["anomaly_type"] = "normal"
+        df.loc[df["notes"].fillna("").str.contains("Weekend HVAC", case=False), "anomaly_type"] = "weekend_hvac_surge"
+        df.loc[df["notes"].fillna("").str.contains("machinery|overnight", case=False), "anomaly_type"] = "night_standby_machinery"
+        df.loc[df["notes"].fillna("").str.contains("meter failure", case=False), "anomaly_type"] = "meter_failure_drop"
+        df.loc[df["notes"].fillna("").str.contains("thermal surge", case=False), "anomaly_type"] = "extreme_thermal_surge"
+
+    return df
 
 
 def run_eda(save_summary: bool = True) -> Dict[str, Any]:

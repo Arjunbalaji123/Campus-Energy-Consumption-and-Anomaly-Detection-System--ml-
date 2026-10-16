@@ -7,6 +7,7 @@ import pytest
 from ml.preprocessing import (
     CampusEnergyPreprocessor,
     chronological_train_test_split,
+    chronological_train_val_test_split,
     FEATURE_COLUMNS,
 )
 from ml.eda import run_eda, load_dataset
@@ -113,4 +114,50 @@ def test_eda_execution():
     assert "building_consumption_stats" in summary
     assert "correlations_with_energy_kwh" in summary
     assert len(summary["injected_anomalies_detected"]) >= 4
+
+
+def test_chronological_train_val_test_split(sample_raw_dataframe):
+    """Verify 3-way chronological split maintains strict timestamp ordering across partitions."""
+    train_df, val_df, test_df = chronological_train_val_test_split(
+        sample_raw_dataframe, train_ratio=0.70, val_ratio=0.10, test_ratio=0.20
+    )
+
+    assert len(train_df) == 70
+    assert len(val_df) == 10
+    assert len(test_df) == 20
+
+    # Ensure no future-data leakage
+    assert train_df["timestamp"].max() < val_df["timestamp"].min()
+    assert val_df["timestamp"].max() < test_df["timestamp"].min()
+
+
+def test_evaluation_metrics_and_prediction_files_exist():
+    """Verify that metrics.json and test_predictions.csv exist with valid structures."""
+    import json
+    from app.core.config import settings
+
+    model_dir = os.path.abspath(settings.MODEL_DIR)
+    metrics_path = os.path.join(model_dir, "metrics.json")
+    pred_path = os.path.join(model_dir, "test_predictions.csv")
+
+    assert os.path.exists(metrics_path), "metrics.json does not exist"
+    assert os.path.exists(pred_path), "test_predictions.csv does not exist"
+
+    with open(metrics_path, "r") as f:
+        metrics = json.load(f)
+
+    assert "random_forest" in metrics
+    assert "lstm" in metrics
+    assert "isolation_forest" in metrics
+    assert metrics["random_forest"]["test_metrics"]["r2_score"] > 0.85
+    assert metrics["lstm"]["test_metrics"]["r2_score"] > 0.85
+
+    df_preds = pd.read_csv(pred_path)
+    assert len(df_preds) == 1296
+    expected_cols = {
+        "timestamp", "building_code", "actual_energy_kwh", "rf_predicted_kwh",
+        "rf_residual_kwh", "iso_forest_score", "iso_forest_is_outlier"
+    }
+    assert expected_cols.issubset(set(df_preds.columns))
+
 

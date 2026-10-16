@@ -20,7 +20,7 @@ sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")
 from app.core.database import SessionLocal
 from app.models.ml import ModelVersion, ModelEvaluationRun
 from ml.eda import load_dataset
-from ml.preprocessing import chronological_train_test_split
+from ml.preprocessing import chronological_train_test_split, chronological_train_val_test_split
 from ml.lstm_model import CITLSTMRegressor
 
 SEQUENCE_FEATURES = [
@@ -34,7 +34,8 @@ SEQUENCE_FEATURES = [
     "floor_area_sqm",    # Building scale
 ]
 
-SEQUENCE_LENGTH = 24  # 24-hour diurnal temporal window
+SEQUENCE_LENGTH = 24  # 24-hour diurnal temporal window (t-24 to t-1)
+PREDICTION_HORIZON = "1_hour_ahead"  # Single-step ahead autoregressive prediction (t)
 
 
 def _engineer_lstm_features(df: pd.DataFrame) -> pd.DataFrame:
@@ -102,30 +103,44 @@ def train_lstm_pipeline(
     hidden_dim: int = 32,
     batch_size: int = 64,
     learning_rate: float = 0.005,
+    val_ratio: float = 0.10,
+    test_ratio: float = 0.20,
     save_artifacts: bool = True
 ) -> dict:
     """Train and evaluate Deep Learning LSTM model on chronological campus data."""
     print("=" * 70)
     print("CIT COIMBATORE - DEEP LEARNING LSTM SEQUENCE MODEL TRAINING")
+    print(f"Configuration: Sequence Length={SEQUENCE_LENGTH}h | Horizon={PREDICTION_HORIZON}")
     print("=" * 70)
 
-    # 1. Load Data
-    raw_df = load_dataset()
+    # 1. Load Data (strictly synthetic seed to prevent leakage from manual entries)
+    raw_df = load_dataset(synthetic_only=True)
     print(f"Loaded {len(raw_df)} total observations.")
 
     # 2. Chronological Split (strictly preventing future-data leakage)
-    train_df, test_df = chronological_train_test_split(raw_df, test_ratio=0.20)
+    if val_ratio > 0.0:
+        train_ratio = 1.0 - val_ratio - test_ratio
+        train_df, val_df, test_df = chronological_train_val_test_split(
+            raw_df, train_ratio=train_ratio, val_ratio=val_ratio, test_ratio=test_ratio
+        )
+        val_df = _engineer_lstm_features(val_df)
+    else:
+        train_df, test_df = chronological_train_test_split(raw_df, test_ratio=test_ratio)
+        val_df = None
+
     train_df = _engineer_lstm_features(train_df)
     test_df = _engineer_lstm_features(test_df)
 
-    print(f"Train split : {len(train_df)} rows")
-    print(f"Test split  : {len(test_df)} rows")
+    print(f"Train split : {len(train_df)} rows ({train_df['timestamp'].min().strftime('%Y-%m-%d')} to {train_df['timestamp'].max().strftime('%Y-%m-%d')})")
+    if val_df is not None:
+        print(f"Val split   : {len(val_df)} rows ({val_df['timestamp'].min().strftime('%Y-%m-%d')} to {val_df['timestamp'].max().strftime('%Y-%m-%d')})")
+    print(f"Test split  : {len(test_df)} rows ({test_df['timestamp'].min().strftime('%Y-%m-%d')} to {test_df['timestamp'].max().strftime('%Y-%m-%d')})")
 
     # 3. Fit Scalers on Train data strictly
     scaler_x = StandardScaler()
     scaler_y = StandardScaler()
 
-    # Fit feature scaler on training features
+    # Fit feature scaler on training features only
     train_feats = train_df[SEQUENCE_FEATURES].values
     scaler_x.fit(train_feats)
     scaler_y.fit(train_df[["energy_kwh"]].values)
@@ -145,8 +160,16 @@ def train_lstm_pipeline(
     y_train_scaled = scaler_y.transform(y_train_scaled)
     y_test_scaled = scaler_y.transform(y_test_scaled)
 
-    print(f"Constructed Train Sequences: X={X_train.shape}, y={y_train_scaled.shape}")
-    print(f"Constructed Test Sequences : X={X_test.shape}, y={y_test_scaled.shape}")
+    if val_df is not None:
+        val_scaled = val_df.copy()
+        val_scaled[SEQUENCE_FEATURES] = scaler_x.transform(val_df[SEQUENCE_FEATURES].values)
+        X_val, y_val_scaled = _build_sequences(val_scaled, seq_length=SEQUENCE_LENGTH)
+        y_val_scaled = scaler_y.transform(y_val_scaled)
+        print(f"Constructed Sequences: Train={X_train.shape}, Val={X_val.shape}, Test={X_test.shape}")
+    else:
+        X_val, y_val_scaled = None, None
+        print(f"Constructed Train Sequences: X={X_train.shape}, y={y_train_scaled.shape}")
+        print(f"Constructed Test Sequences : X={X_test.shape}, y={y_test_scaled.shape}")
 
     # 5. Initialize and Train LSTM Regressor
     model = CITLSTMRegressor(
@@ -228,7 +251,10 @@ def train_lstm_pipeline(
                 "input_dim": len(SEQUENCE_FEATURES),
                 "hidden_dim": hidden_dim,
                 "sequence_length": SEQUENCE_LENGTH,
+                "prediction_horizon": PREDICTION_HORIZON,
                 "feature_names": SEQUENCE_FEATURES,
+                "val_ratio": val_ratio,
+                "test_ratio": test_ratio,
             },
             "scaler_x": scaler_x,
             "scaler_y": scaler_y,

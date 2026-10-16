@@ -1,0 +1,73 @@
+{
+  "system": "CIT Coimbatore Campus Energy Consumption & Anomaly Detection System",
+  "generated_at": "2026-10-16T01:58:22.928490Z",
+  "dataset": {
+    "name": "CIT Coimbatore Synthetic Hourly Campus Energy Dataset",
+    "total_records": 6480,
+    "seed": 42,
+    "split_policy": "strict_chronological_no_leakage",
+    "train_split": {
+      "count": 5184,
+      "ratio": 0.8,
+      "start": "2026-08-15T00:00:00",
+      "end": "2026-09-19T23:00:00"
+    },
+    "test_split": {
+      "count": 1296,
+      "ratio": 0.2,
+      "start": "2026-09-20T00:00:00",
+      "end": "2026-09-28T23:00:00"
+    }
+  },
+  "random_forest": {
+    "model_version": "rf_expected_v1",
+    "algorithm": "RandomForestRegressor",
+    "hyperparameters": {
+      "n_estimators": 120,
+      "max_depth": 16,
+      "min_samples_split": 4,
+      "min_samples_leaf": 2,
+      "random_state": 42
+    },
+    "test_metrics": {
+      "mae_kwh": 2.214,
+      "rmse_kwh": 3.575,
+      "r2_score": 0.9754
+    },
+    "artifact_file": "rf_expected_v1.joblib"
+  },
+  "lstm": {
+    "model_version": "lstm_expected_v1",
+    "algorithm": "CITLSTMRegressor (NumPy Sequence Model with BPTT)",
+    "sequence_length_hours": 24,
+    "prediction_horizon": "1_hour_ahead",
+    "test_metrics": {
+      "mae_kwh": 0.191,
+      "rmse_kwh": 0.272,
+      "r2_score": 0.928,
+      "test_sequences": 1152
+    },
+    "artifact_file": "lstm_expected_v1.joblib"
+  },
+  "isolation_forest": {
+    "model_version": "iso_forest_v1",
+    "algorithm": "IsolationForest",
+    "contamination": 0.04,
+    "test_evaluation": {
+      "total_test_observations": 1296,
+      "outliers_flagged": 42,
+      "outlier_percentage": 3.24,
+      "score_min": -0.0169,
+      "score_max": 0.0898,
+      "labelled_test_anomalies": 1,
+      "true_positives": 1,
+      "false_positives": 41,
+      "false_negatives": 0,
+      "true_negatives": 1254,
+      "precision": 0.0238,
+      "recall": 1.0,
+      "f1_score": 0.0465
+    },
+    "artifact_file": "iso_forest_v1.joblib"
+  }
+}

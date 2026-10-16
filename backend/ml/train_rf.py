@@ -36,8 +36,8 @@ def train_random_forest_model(
     print("CIT COIMBATORE - RANDOM FOREST EXPECTED ENERGY MODEL TRAINING")
     print("=" * 70)
 
-    # 1. Load Data
-    df = load_dataset()
+    # 1. Load Data (Strictly Synthetic Seed to prevent manual entry contamination)
+    df = load_dataset(synthetic_only=True)
     print(f"Loaded {len(df)} total observations.")
 
     # 2. Chronological Train/Test Split

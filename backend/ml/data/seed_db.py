@@ -318,27 +318,32 @@ def generate_seed_data(days: int = 45):
             # Injected Anomaly Scenarios (deliberately crafted for testing)
             hvac_state = "on" if (has_hvac and op_status != "closed") else "off"
             anomaly_note = None
+            anomaly_type = "normal"
 
             # Scenario A: IT Block Weekend AC left running (Day 12, Sunday, 14:00)
             if code == "CIT-IT" and h_idx == (12 * 24 + 14):
                 kwh = 168.5  # Surge from expected ~45 kWh
                 hvac_state = "on"
                 anomaly_note = "INJECTED_ANOMALY: Weekend HVAC left running at full power with low occupancy."
+                anomaly_type = "weekend_hvac_surge"
 
             # Scenario B: Laboratory Block Midnight Equipment left active (Day 25, Wednesday, 02:00)
             elif code == "CIT-LAB" and h_idx == (25 * 24 + 2):
                 kwh = 98.0   # Surge from expected ~25 kWh
                 anomaly_note = "INJECTED_ANOMALY: Heavy testing machinery active overnight outside operating hours."
+                anomaly_type = "night_standby_machinery"
 
             # Scenario C: Workshop Block Meter Trip / Drop (Day 32, Monday, 11:00)
             elif code == "CIT-WORK" and h_idx == (32 * 24 + 11):
                 kwh = 2.1    # Drop from expected ~90 kWh
                 anomaly_note = "INJECTED_ANOMALY: Plausible meter failure or tripped main circuit breaker."
+                anomaly_type = "meter_failure_drop"
 
             # Scenario D: Academic Block Heatwave surge (Day 40, Thursday, 14:00)
             elif code == "CIT-ACAD" and h_idx == (40 * 24 + 14):
                 kwh = 132.0  # Spike due to severe heat load and fan usage
                 anomaly_note = "INJECTED_ANOMALY: Extreme thermal surge in non-HVAC building."
+                anomaly_type = "extreme_thermal_surge"
 
             # Create Energy Reading
             reading = EnergyReading(
@@ -379,6 +384,8 @@ def generate_seed_data(days: int = 45):
                 "operating_status": op_status,
                 "has_hvac": has_hvac,
                 "is_synthetic": True,
+                "is_anomaly": anomaly_note is not None,
+                "anomaly_type": anomaly_type,
                 "notes": anomaly_note or "",
             })
 

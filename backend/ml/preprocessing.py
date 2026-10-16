@@ -175,3 +175,32 @@ def chronological_train_test_split(
 
     return train_df, test_df
 
+
+def chronological_train_val_test_split(
+    df: pd.DataFrame,
+    train_ratio: float = 0.70,
+    val_ratio: float = 0.10,
+    test_ratio: float = 0.20
+) -> Tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame]:
+    """Split time-series data chronologically into train, validation, and test partitions.
+    
+    Guarantees strict chronological ordering with zero future-data leakage:
+    max(train_timestamp) < min(val_timestamp) and max(val_timestamp) < min(test_timestamp).
+    """
+    if "timestamp" not in df.columns:
+        raise ValueError("DataFrame must contain a 'timestamp' column for chronological split.")
+
+    if not np.isclose(train_ratio + val_ratio + test_ratio, 1.0):
+        raise ValueError("train_ratio + val_ratio + test_ratio must sum to 1.0")
+
+    df_sorted = df.sort_values("timestamp").reset_index(drop=True)
+    n = len(df_sorted)
+    train_end_idx = int(n * train_ratio)
+    val_end_idx = int(n * (train_ratio + val_ratio))
+
+    train_df = df_sorted.iloc[:train_end_idx].copy()
+    val_df = df_sorted.iloc[train_end_idx:val_end_idx].copy()
+    test_df = df_sorted.iloc[val_end_idx:].copy()
+
+    return train_df, val_df, test_df
+
