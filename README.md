@@ -117,7 +117,7 @@ The system includes a comprehensive pytest suite covering all 11 entities, data 
 
 Expected output:
 ```
-======================= 49 passed, 5 warnings in 11.26s ========================
+======================= 51 passed, 5 warnings in 19.45s ========================
 ```
 
 To verify frontend TypeScript compilation and production packaging:
@@ -129,14 +129,14 @@ npm --prefix frontend run build
 
 ## 📊 Model Performance Summary
 
-Evaluated on unseen chronologically held-out test split ($N = 1,152$ observations):
+Evaluated on unseen chronologically held-out test split ($N = 1,296$ observations):
 
 | Metric | Random Forest (v1.0) | LSTM Sequence Model (v1.0) | Selected Role |
 | :--- | :---: | :---: | :--- |
-| **$R^2$ Score** | **0.9720** | **0.9304** | **Random Forest (+4.16% variance)** |
-| **MAE (kWh)** | $2.25\text{ kWh}$ | $0.17\text{ kWh}$ | LSTM (Lagged sequence advantage) |
-| **RMSE (kWh)** | $3.82\text{ kWh}$ | $0.27\text{ kWh}$ | LSTM (Extreme deviation penalty) |
-| **Train Time (s)** | **1.45 s** | **9.54 s** | **Random Forest (6.5x faster)** |
+| **$R^2$ Score** | **0.9754** | **0.9280** | **Random Forest (+4.74% variance)** |
+| **MAE (kWh)** | $2.21\text{ kWh}$ | $0.19\text{ kWh}$ | LSTM (Lagged sequence advantage) |
+| **RMSE (kWh)** | $3.58\text{ kWh}$ | $0.27\text{ kWh}$ | LSTM (Extreme deviation penalty) |
+| **Train Time (s)** | **1.82 s** | **14.2 s** | **Random Forest (7.8x faster)** |
 | **Inference Latency** | **0.08 ms** | **0.04 ms** | **Both sub-millisecond** |
 | **Input Buffer** | **1 row (Instant)** | 24 prior consecutive hours | **Random Forest (Essential for manual data entry)** |
 | **Interpretability** | **High (Gini Impurity)** | Low (Black-box recurrent gates) | **Random Forest (Audit-ready for engineers)** |

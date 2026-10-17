@@ -146,7 +146,7 @@ flowchart LR
 **URL:** `http://localhost:5173/models`
 
 - **What to show:**
-  - Show the **Empirical Metric Benchmarks Bar Chart** comparing Random Forest ($R^2 = 0.9720$) vs. LSTM ($R^2 = 0.9304$).
+  - Show the **Empirical Metric Benchmarks Bar Chart** comparing Random Forest ($R^2 = 0.9754$) vs. LSTM ($R^2 = 0.9280$).
   - Review the **Gini Feature Importance** breakdown on the Random Forest card: Occupancy ($69.9\%$), IT Block ($17.5\%$), Laboratory ($4.2\%$).
   - Show the **LSTM Architecture Card** displaying the internal gate equations ($f_t, i_t, \tilde{c}_t, o_t$) and 24-hour sliding sequence formulation.
   - Present the **Academic Viva Defense Panel**: explain why Random Forest is chosen for production manual entry while LSTM serves as a continuous sequence benchmark.
@@ -173,8 +173,35 @@ In your terminal, execute the full pytest suite before the examiners:
 ```
 - **Expected Result:**
   ```
-  ======================= 49 passed, 5 warnings in 11.26s ========================
+  ======================= 51 passed, 5 warnings in 19.45s ========================
   ```
 - **What to say to the examiner:**
-  > *"All 49 unit and integration tests pass across data schemas, feature engineering, Random Forest inference, Isolation Forest outlier detection, explanation rules, and REST API endpoints."*
+  > *"All 51 unit and integration tests pass across data schemas, feature engineering, Random Forest inference, Isolation Forest outlier detection, explanation rules, and REST API endpoints."*
+
+---
+
+### Step 10: Reproducible Synthetic Demo Scenarios (10 Test Cases)
+Run the automated scenario test runner covering normal, warning, critical, missing-sensor, and breaker-trip conditions:
+```bash
+PYTHONPATH=backend ./backend/venv/bin/python backend/ml/run_demo_scenarios.py
+```
+- **Expected Result:**
+  ```
+  =====================================================================================
+  Summary: 10 / 10 scenarios matched intended baseline expectation exactly.
+  =====================================================================================
+  ```
+- **Scenario Catalog (`backend/ml/data/demo_scenarios.json`):**
+  - **SCN-01:** Normal Daytime Academic Baseline (CIT-ACAD, +1.6% residual &rarr; `normal`)
+  - **SCN-02:** Low Variance Inlier (CIT-MAIN, -9.3% residual &rarr; `normal`)
+  - **SCN-03:** Moderate Afternoon Deviation (CIT-LIB, +32.7% residual &rarr; `warning`)
+  - **SCN-04:** Critical Lab Equipment Surge (CIT-LAB, +86.6% residual &rarr; `critical`)
+  - **SCN-05:** Midnight IT Server Surge (CIT-IT, +303.2% residual &rarr; `critical`)
+  - **SCN-06:** Weekend High Load Low Occupancy (CIT-IT, +277.4% residual &rarr; `critical`)
+  - **SCN-07:** After-Hours Heavy Machinery Spike (CIT-LAB, +276.9% residual &rarr; `critical`)
+  - **SCN-08:** Heatwave Thermal Cooling Surge (CIT-ACAD, +168.5% residual &rarr; `critical`)
+  - **SCN-09:** Missing Sensor Graceful Imputation (CIT-MAIN, +3.4% residual &rarr; `normal`)
+  - **SCN-10:** Sudden Sub-meter Breaker Drop (CIT-WORK, -95.8% drop &rarr; `critical`)
+- **What to say to the examiner:**
+  > *"This test runner executes 10 pre-calibrated scenario records against the live trained model artifacts, demonstrating reliable classification from normal inliers to missing data imputation and severe equipment faults without false alarms."*
 
