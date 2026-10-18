@@ -2,6 +2,7 @@
 import os
 from typing import Optional, List, Tuple, Dict, Any
 from datetime import datetime
+from app.core.datetime_utils import get_utc_now
 from sqlalchemy.orm import Session
 from fastapi import HTTPException, status
 import joblib
@@ -147,7 +148,7 @@ def evaluate_reading_anomalies(
             severity=severity,
             anomaly_score=round(iso_score, 4),
             status="open",
-            detected_at=datetime.utcnow(),
+            detected_at=get_utc_now(),
         )
         db.add(event)
 

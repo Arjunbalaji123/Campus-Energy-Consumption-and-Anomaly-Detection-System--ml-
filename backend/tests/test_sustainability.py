@@ -139,9 +139,12 @@ def test_emission_factor_get_and_update():
     })
 
 
+from app.core.datetime_utils import get_utc_now
+
+
 def test_sustainability_targets_lifecycle():
     """Verify target registration and progress retrieval."""
-    now = datetime.utcnow()
+    now = get_utc_now()
     target_payload = {
         "name": "CIT Solar Rooftop Offset 2026",
         "description": "Offsetting daytime laboratory baseline consumption via rooftop PV integration.",
@@ -175,7 +178,7 @@ def test_savings_verification_insufficient_data_guard():
     db.close()
     assert rec is not None
 
-    now = datetime.utcnow()
+    now = get_utc_now()
     # Window with zero readings (future dates)
     future_payload = {
         "recommendation_id": rec.id,

@@ -181,20 +181,26 @@ def get_dashboard_timeseries_analytics(
         )
 
     # Compute 24-hour diurnal profile (Working Day vs Non-Working Day)
-    diurnal_query = db.query(EnergyReading)
+    # Query specific columns only to avoid hydrating thousands of full ORM objects
+    diurnal_query = db.query(
+        EnergyReading.timestamp,
+        EnergyReading.energy_kwh,
+        EnergyReading.day_type
+    )
     if building_id:
         diurnal_query = diurnal_query.filter(EnergyReading.building_id == building_id)
 
-    all_readings = diurnal_query.all()
+    readings_data = diurnal_query.all()
     work_by_hour: Dict[int, List[float]] = {h: [] for h in range(24)}
     nonwork_by_hour: Dict[int, List[float]] = {h: [] for h in range(24)}
 
-    for r in all_readings:
-        h = r.timestamp.hour
-        if r.day_type == "working_day":
-            work_by_hour[h].append(r.energy_kwh)
+    for ts, kwh, day_type in readings_data:
+        h = ts.hour
+        val = float(kwh)
+        if day_type == "working_day":
+            work_by_hour[h].append(val)
         else:
-            nonwork_by_hour[h].append(r.energy_kwh)
+            nonwork_by_hour[h].append(val)
 
     diurnal_profile = []
     for h in range(24):

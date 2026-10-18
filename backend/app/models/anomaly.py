@@ -1,10 +1,10 @@
-"""SQLAlchemy ORM models for Anomaly Events, Explanations, and Actionable Recommendations."""
 from datetime import datetime
 from sqlalchemy import (
     Column, Integer, String, Float, DateTime, Text, ForeignKey, JSON
 )
 from sqlalchemy.orm import relationship
 from app.core.database import Base
+from app.core.datetime_utils import get_utc_now
 
 
 class AnomalyEvent(Base):
@@ -19,7 +19,7 @@ class AnomalyEvent(Base):
     severity = Column(String(20), nullable=False, index=True)  # 'normal', 'warning', 'critical'
     anomaly_score = Column(Float, nullable=True)           # Isolation forest decision function or z-score
     status = Column(String(30), default="open", nullable=False, index=True)  # 'open', 'investigating', 'resolved', 'dismissed'
-    detected_at = Column(DateTime, default=datetime.utcnow, nullable=False, index=True)
+    detected_at = Column(DateTime, default=get_utc_now, nullable=False, index=True)
 
     # Relationships
     reading = relationship("EnergyReading", back_populates="anomaly_events")
@@ -43,7 +43,7 @@ class AnomalyExplanation(Base):
     confidence = Column(String(20), nullable=False)       # 'low', 'medium', 'high'
     data_to_confirm = Column(Text, nullable=True)         # Additional data that would verify the cause
     recommended_next_action = Column(Text, nullable=True) # Direct action hint
-    created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
+    created_at = Column(DateTime, default=get_utc_now, nullable=False)
 
     # Relationship
     anomaly_event = relationship("AnomalyEvent", back_populates="explanations")
@@ -67,7 +67,7 @@ class Recommendation(Base):
     follow_up_verification = Column(Text, nullable=True)
     status = Column(String(30), default="open", nullable=False, index=True)  # 'open', 'investigating', 'resolved', 'dismissed'
     estimated_savings_kwh = Column(Float, nullable=True)       # Documented estimate only
-    created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
+    created_at = Column(DateTime, default=get_utc_now, nullable=False)
 
     # Relationship
     anomaly_event = relationship("AnomalyEvent", back_populates="recommendations")

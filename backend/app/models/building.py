@@ -1,10 +1,10 @@
-"""SQLAlchemy ORM models for Campus Buildings and Equipment Profiles."""
 from datetime import datetime
 from sqlalchemy import (
     Column, Integer, String, Float, Boolean, DateTime, Text, ForeignKey, Enum as SQLEnum
 )
 from sqlalchemy.orm import relationship
 from app.core.database import Base
+from app.core.datetime_utils import get_utc_now
 
 
 class Building(Base):
@@ -28,8 +28,8 @@ class Building(Base):
     meter_identifier = Column(String(50), nullable=True, unique=True)
     notes = Column(Text, nullable=True)
     is_active = Column(Boolean, default=True, nullable=False)
-    created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
-    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False)
+    created_at = Column(DateTime, default=get_utc_now, nullable=False)
+    updated_at = Column(DateTime, default=get_utc_now, onupdate=get_utc_now, nullable=False)
 
     # Relationships
     readings = relationship("EnergyReading", back_populates="building", cascade="all, delete-orphan")
@@ -52,7 +52,7 @@ class EquipmentProfile(Base):
     count = Column(Integer, default=1, nullable=False)
     operating_schedule = Column(String(100), nullable=True)
     notes = Column(Text, nullable=True)
-    created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
+    created_at = Column(DateTime, default=get_utc_now, nullable=False)
 
     # Relationship
     building = relationship("Building", back_populates="equipment_profiles")

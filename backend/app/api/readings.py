@@ -4,6 +4,7 @@ from datetime import datetime
 from fastapi import APIRouter, Depends, Query, UploadFile, File, Response, status
 from sqlalchemy.orm import Session
 from app.core.database import get_db
+from app.core.datetime_utils import get_utc_now
 from app.schemas.reading import (
     EnergyReadingCreate, EnergyReadingUpdate, EnergyReadingResponse,
     PaginatedReadingsResponse, CSVImportSummaryResponse
@@ -83,7 +84,7 @@ def export_csv(
 ):
     """Export campus energy records as a downloadable CSV file."""
     csv_data = reading_service.export_readings_to_csv(db, building_id=building_id, limit=limit)
-    filename = f"cit_energy_export_{datetime.utcnow().strftime('%Y%m%d_%H%M%S')}.csv"
+    filename = f"cit_energy_export_{get_utc_now().strftime('%Y%m%d_%H%M%S')}.csv"
     return Response(
         content=csv_data,
         media_type="text/csv",

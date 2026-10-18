@@ -10,6 +10,8 @@ from sqlalchemy.orm import Session
 from sqlalchemy import func, and_, or_
 from fastapi import HTTPException, status
 
+from app.core.datetime_utils import get_utc_now
+
 from app.models.building import Building
 from app.models.reading import EnergyReading
 from app.models.anomaly import AnomalyEvent, Recommendation
@@ -49,7 +51,7 @@ def get_or_create_emissions_factor(db: Session) -> SustainabilityConfig:
             effective_date=DEFAULT_EFFECTIVE_DATE,
             applicable_region=DEFAULT_REGION,
             notes="Official Scope 2 location-based grid emission factor for Tamil Nadu electricity consumption.",
-            updated_at=datetime.utcnow()
+            updated_at=get_utc_now()
         )
         db.add(config)
         db.commit()
@@ -84,7 +86,7 @@ def update_emissions_factor(db: Session, update_data: EmissionsFactorUpdate) -> 
         config.applicable_region = update_data.applicable_region
     if update_data.notes is not None:
         config.notes = update_data.notes
-    config.updated_at = datetime.utcnow()
+    config.updated_at = get_utc_now()
     db.commit()
     db.refresh(config)
     return get_emissions_factor_info(db)
@@ -427,7 +429,7 @@ def get_sustainability_targets(db: Session) -> List[SustainabilityTargetResponse
 
 def seed_default_targets(db: Session):
     """Seed initial realistic campus targets based on existing CIT buildings."""
-    now = datetime.utcnow()
+    now = get_utc_now()
     t1 = SustainabilityTarget(
         name="CIT 10% Campus Electricity Decarbonization 2026",
         description="Institutional efficiency directive targeting 10% reduction in campus-wide electricity consumption.",
@@ -483,7 +485,7 @@ def create_sustainability_target(db: Session, target_in: SustainabilityTargetCre
         target_completion_date=target_in.target_completion_date,
         status="in_progress",
         current_measured_progress_pct=0.0,
-        last_calculated_at=datetime.utcnow()
+        last_calculated_at=get_utc_now()
     )
     db.add(target)
     db.commit()
@@ -499,7 +501,7 @@ def create_sustainability_target(db: Session, target_in: SustainabilityTargetCre
 def recalculate_target_progress(db: Session, target: SustainabilityTarget):
     """Update measured target reduction progress against current telemetry."""
     # Compare baseline value with current period
-    now = datetime.utcnow()
+    now = get_utc_now()
     window_start = now - timedelta(days=14)
 
     q = db.query(func.sum(EnergyReading.energy_kwh))
@@ -564,7 +566,7 @@ def seed_default_verifications(db: Session):
     if not rec:
         return
 
-    now = datetime.utcnow()
+    now = get_utc_now()
     factor = DEFAULT_GRID_FACTOR
 
     base_kwh = 68.5
@@ -614,11 +616,11 @@ def verify_recommendation_savings(
     reading = anomaly.reading if anomaly else None
     building_id = reading.building_id if reading else None
 
-    now = datetime.utcnow()
-    base_start = data.baseline_period_start if data else (now - timedelta(days=14))
-    base_end = data.baseline_period_end if data else (now - timedelta(days=7))
-    post_start = data.post_action_period_start if data else (now - timedelta(days=6))
-    post_end = data.post_action_period_end if data else now
+    now = get_utc_now()
+    base_start = data.baseline_period_start if (data and data.baseline_period_start) else (now - timedelta(days=14))
+    base_end = data.baseline_period_end if (data and data.baseline_period_end) else (now - timedelta(days=7))
+    post_start = data.post_action_period_start if (data and data.post_action_period_start) else (now - timedelta(days=6))
+    post_end = data.post_action_period_end if (data and data.post_action_period_end) else now
 
     # Query baseline readings
     q_base = db.query(
@@ -718,7 +720,7 @@ def generate_sustainability_report(
 
     return SustainabilityReportResponse(
         report_title="Coimbatore Institute of Technology — Campus Energy & Sustainability Audit Report",
-        generated_at=datetime.utcnow(),
+        generated_at=get_utc_now(),
         reporting_period_start=summary.reporting_period_start,
         reporting_period_end=summary.reporting_period_end,
         data_provenance_disclaimer=(

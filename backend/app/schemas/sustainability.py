@@ -132,11 +132,11 @@ class SustainabilityTargetResponse(SustainabilityTargetBase):
 
 
 class SustainabilityVerificationCreate(BaseModel):
-    recommendation_id: int
-    baseline_period_start: datetime
-    baseline_period_end: datetime
-    post_action_period_start: datetime
-    post_action_period_end: datetime
+    recommendation_id: Optional[int] = None
+    baseline_period_start: Optional[datetime] = None
+    baseline_period_end: Optional[datetime] = None
+    post_action_period_start: Optional[datetime] = None
+    post_action_period_end: Optional[datetime] = None
     verification_criteria: Optional[str] = None
     notes: Optional[str] = None
 

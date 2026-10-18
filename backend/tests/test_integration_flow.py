@@ -126,6 +126,38 @@ def test_full_campus_energy_lifecycle():
     assert stat2.status_code == 200
     assert stat2.json()["status"] == "resolved"
 
+    # -------------------------------------------------------------
+    # 8. Query Sustainability Summary & Building Benchmarks
+    # -------------------------------------------------------------
+    sust_summary = client.get("/api/sustainability/summary")
+    assert sust_summary.status_code == 200
+    sust_data = sust_summary.json()
+    assert sust_data["total_energy_kwh"] > 0
+    assert sust_data["total_emissions_kg_co2e"] > 0
+    assert sust_data["average_energy_intensity_kwh_sqm"] >= 0
+
+    # -------------------------------------------------------------
+    # 9. Perform Post-Action Savings Verification
+    # -------------------------------------------------------------
+    verify_res = client.post(f"/api/sustainability/verify/{rec_id}", json={})
+    assert verify_res.status_code == 200
+    ver_data = verify_res.json()
+    assert ver_data["recommendation_id"] == rec_id
+    assert ver_data["verification_status"] in ["verified", "insufficient_data"]
+
+    # -------------------------------------------------------------
+    # 10. Verify Sustainability Audit Report Generation
+    # -------------------------------------------------------------
+    report_res = client.get("/api/sustainability/report")
+    assert report_res.status_code == 200
+    rep_data = report_res.json()
+    assert "Coimbatore Institute of Technology" in rep_data["report_title"]
+    assert "summary_metrics" in rep_data
+    assert "targets_status" in rep_data
+    assert "verified_savings_ledger" in rep_data
+    assert "building_benchmarks" in rep_data
+    assert len(rep_data["targets_status"]) >= 1
+
 
 def test_system_settings_and_threshold_calibration():
     """Verify settings retrieval and threshold validation."""

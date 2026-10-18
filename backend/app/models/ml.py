@@ -1,10 +1,10 @@
-"""SQLAlchemy ORM models for Machine Learning Models, Predictions, and Evaluation Runs."""
 from datetime import datetime
 from sqlalchemy import (
     Column, Integer, String, Float, Boolean, DateTime, Text, ForeignKey, JSON
 )
 from sqlalchemy.orm import relationship
 from app.core.database import Base
+from app.core.datetime_utils import get_utc_now
 
 
 class ModelVersion(Base):
@@ -20,7 +20,7 @@ class ModelVersion(Base):
     metrics = Column(JSON, nullable=True)             # Train/validation metrics (MAE, RMSE, R2)
     is_active = Column(Boolean, default=True, nullable=False)
     notes = Column(Text, nullable=True)
-    trained_at = Column(DateTime, default=datetime.utcnow, nullable=False)
+    trained_at = Column(DateTime, default=get_utc_now, nullable=False)
 
     # Relationships
     predictions = relationship("Prediction", back_populates="model_version")
@@ -42,7 +42,7 @@ class Prediction(Base):
     predicted_energy_kwh = Column(Float, nullable=False)
     residual_kwh = Column(Float, nullable=False)         # Actual - Predicted
     deviation_pct = Column(Float, nullable=True)         # (Residual / Predicted) * 100
-    created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
+    created_at = Column(DateTime, default=get_utc_now, nullable=False)
 
     # Relationships
     reading = relationship("EnergyReading", back_populates="predictions")
@@ -71,7 +71,7 @@ class ModelEvaluationRun(Base):
     r2_score = Column(Float, nullable=False) # Coefficient of Determination
     
     notes = Column(Text, nullable=True)
-    created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
+    created_at = Column(DateTime, default=get_utc_now, nullable=False)
 
     # Relationship
     model_version = relationship("ModelVersion", back_populates="evaluation_runs")

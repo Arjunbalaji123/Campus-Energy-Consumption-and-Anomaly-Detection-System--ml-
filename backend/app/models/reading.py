@@ -1,10 +1,10 @@
-"""SQLAlchemy ORM models for Energy Readings, Weather, and Occupancy."""
 from datetime import datetime
 from sqlalchemy import (
     Column, Integer, String, Float, Boolean, DateTime, Text, ForeignKey, Index
 )
 from sqlalchemy.orm import relationship
 from app.core.database import Base
+from app.core.datetime_utils import get_utc_now
 
 
 class WeatherObservation(Base):
@@ -19,7 +19,7 @@ class WeatherObservation(Base):
     rainfall_mm = Column(Float, nullable=True, default=0.0)
     season = Column(String(50), nullable=False)  # 'Winter', 'Summer', 'SW_Monsoon', 'NE_Monsoon'
     is_synthetic = Column(Boolean, default=False, nullable=False)
-    created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
+    created_at = Column(DateTime, default=get_utc_now, nullable=False)
 
     # Relationships
     readings = relationship("EnergyReading", back_populates="weather")
@@ -39,7 +39,7 @@ class OccupancyRecord(Base):
     occupancy_pct = Column(Float, nullable=True)  # 0.0 to 100.0%
     is_estimated = Column(Boolean, default=False, nullable=False)
     is_synthetic = Column(Boolean, default=False, nullable=False)
-    created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
+    created_at = Column(DateTime, default=get_utc_now, nullable=False)
 
     # Relationships
     building = relationship("Building", back_populates="occupancy_records")
@@ -83,7 +83,7 @@ class EnergyReading(Base):
     data_source = Column(String(50), default="manual", nullable=False)  # 'manual', 'csv_import', 'synthetic_seed'
     tariff_rate = Column(Float, nullable=True)  # in INR ₹/kWh
     notes = Column(Text, nullable=True)
-    created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
+    created_at = Column(DateTime, default=get_utc_now, nullable=False)
 
     # Relationships
     building = relationship("Building", back_populates="readings")

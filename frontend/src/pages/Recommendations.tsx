@@ -1,9 +1,10 @@
 import React, { useEffect, useState } from 'react'
+import { Link } from 'react-router-dom'
 import { api } from '../services/api'
 import type { Recommendation } from '../types'
 import {
   Lightbulb, CheckCircle2, User, DollarSign,
-  TrendingDown, ShieldCheck, Search, RefreshCw, AlertCircle
+  TrendingDown, ShieldCheck, Search, RefreshCw, AlertCircle, Leaf
 } from 'lucide-react'
 
 export const Recommendations: React.FC = () => {
@@ -266,22 +267,34 @@ export const Recommendations: React.FC = () => {
 
                 <div className="flex items-center justify-between pt-1">
                   <span className="text-xs text-slate-400 font-medium">Lifecycle Status:</span>
-                  <select
-                    value={rec.status}
-                    onChange={(e) => handleStatusChange(rec.id, e.target.value)}
-                    className={`px-3 py-1 text-xs border rounded font-semibold focus:outline-none ${
-                      rec.status === 'resolved'
-                        ? 'bg-emerald-50 text-emerald-800 border-emerald-300'
-                        : rec.status === 'investigating'
-                        ? 'bg-amber-50 text-amber-800 border-amber-300'
-                        : 'bg-white text-slate-700 border-slate-300'
-                    }`}
-                  >
-                    <option value="open">Open</option>
-                    <option value="investigating">Investigating</option>
-                    <option value="resolved">Resolved</option>
-                    <option value="dismissed">Dismissed</option>
-                  </select>
+                  <div className="flex items-center gap-2">
+                    {rec.status === 'resolved' && (
+                      <Link
+                        to="/sustainability"
+                        className="inline-flex items-center gap-1 text-[11px] font-semibold text-emerald-700 hover:text-emerald-800 bg-emerald-50 hover:bg-emerald-100 px-2 py-0.5 rounded border border-emerald-200 transition-colors"
+                        title="View or verify in Campus Sustainability Ledger"
+                      >
+                        <Leaf className="w-3 h-3 text-emerald-600" />
+                        Verify Impact
+                      </Link>
+                    )}
+                    <select
+                      value={rec.status}
+                      onChange={(e) => handleStatusChange(rec.id, e.target.value)}
+                      className={`px-3 py-1 text-xs border rounded font-semibold focus:outline-none ${
+                        rec.status === 'resolved'
+                          ? 'bg-emerald-50 text-emerald-800 border-emerald-300'
+                          : rec.status === 'investigating'
+                          ? 'bg-amber-50 text-amber-800 border-amber-300'
+                          : 'bg-white text-slate-700 border-slate-300'
+                      }`}
+                    >
+                      <option value="open">Open</option>
+                      <option value="investigating">Investigating</option>
+                      <option value="resolved">Resolved</option>
+                      <option value="dismissed">Dismissed</option>
+                    </select>
+                  </div>
                 </div>
               </div>
             </div>

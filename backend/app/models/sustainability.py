@@ -9,6 +9,7 @@ from sqlalchemy import (
 )
 from sqlalchemy.orm import relationship
 from app.core.database import Base
+from app.core.datetime_utils import get_utc_now
 
 
 class SustainabilityConfig(Base):
@@ -23,7 +24,7 @@ class SustainabilityConfig(Base):
     effective_date = Column(String(50), nullable=False)
     applicable_region = Column(String(150), nullable=False)
     notes = Column(Text, nullable=True)
-    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False)
+    updated_at = Column(DateTime, default=get_utc_now, onupdate=get_utc_now, nullable=False)
 
     def __repr__(self):
         return f"<SustainabilityConfig(key='{self.config_key}', val={self.config_value} {self.unit})>"
@@ -54,9 +55,9 @@ class SustainabilityTarget(Base):
     current_measured_progress_pct = Column(Float, default=0.0, nullable=False)
     current_measured_value = Column(Float, nullable=True)
     status = Column(String(30), default="in_progress", nullable=False, index=True)  # 'in_progress', 'achieved', 'at_risk', 'expired'
-    last_calculated_at = Column(DateTime, default=datetime.utcnow, nullable=False)
-    created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
-    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False)
+    last_calculated_at = Column(DateTime, default=get_utc_now, nullable=False)
+    created_at = Column(DateTime, default=get_utc_now, nullable=False)
+    updated_at = Column(DateTime, default=get_utc_now, onupdate=get_utc_now, nullable=False)
 
     # Relationship
     building = relationship("Building")
@@ -94,7 +95,7 @@ class SustainabilityVerification(Base):
     verified_by = Column(String(100), default="Automated Telemetry Audit", nullable=False)
     verified_at = Column(DateTime, nullable=True)
     notes = Column(Text, nullable=True)
-    created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
+    created_at = Column(DateTime, default=get_utc_now, nullable=False)
 
     # Relationship
     recommendation = relationship("Recommendation")
