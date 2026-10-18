@@ -64,7 +64,7 @@ def health_check(db: Session = Depends(get_db)):
 
 
 # Register Modular API Routers
-from app.api import buildings, readings, predictions, models, anomalies, recommendations, dashboard, settings as settings_api
+from app.api import buildings, readings, predictions, models, anomalies, recommendations, dashboard, settings as settings_api, sustainability
 
 app.include_router(buildings.router, prefix=settings.API_V1_STR)
 app.include_router(readings.router, prefix=settings.API_V1_STR)
@@ -74,5 +74,6 @@ app.include_router(anomalies.router, prefix=settings.API_V1_STR)
 app.include_router(recommendations.router, prefix=settings.API_V1_STR)
 app.include_router(dashboard.router, prefix=settings.API_V1_STR)
 app.include_router(settings_api.router, prefix=settings.API_V1_STR)
+app.include_router(sustainability.router, prefix=settings.API_V1_STR)
 
 

@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 import { NavLink } from 'react-router-dom'
 import {
   LayoutDashboard, Building2, Zap, BrainCircuit,
-  AlertTriangle, Lightbulb, Activity, Settings as SettingsIcon
+  AlertTriangle, Lightbulb, Activity, Settings as SettingsIcon, Leaf
 } from 'lucide-react'
 import { api } from '../services/api'
 
@@ -22,6 +22,7 @@ export default function Navbar() {
     { to: '/predictions', label: 'Predictions', icon: BrainCircuit },
     { to: '/anomalies', label: 'Anomaly Center', icon: AlertTriangle },
     { to: '/recommendations', label: 'Recommendations', icon: Lightbulb },
+    { to: '/sustainability', label: 'Sustainability', icon: Leaf },
     { to: '/models', label: 'Model Performance', icon: Activity },
     { to: '/settings', label: 'Settings', icon: SettingsIcon },
   ]

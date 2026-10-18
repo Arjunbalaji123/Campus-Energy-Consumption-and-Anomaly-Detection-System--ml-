@@ -13,8 +13,9 @@ Colleges and university campuses represent complex micro-grids with heterogeneou
 2. **Surfaces Anomaly Events via Dual Methods:** Combines percentage residual deviation analysis ($\Delta\text{ kWh} > 40\%$) with multi-dimensional unsupervised outlier detection (`IsolationForest`, $c = 0.03$).
 3. **Explains Root Causes Deterministically:** Evaluates physical rules to produce transparent hypotheses and physical verification checklists without AI hallucinations.
 4. **Prescribes Actionable Directives:** Assigns specific operational steps to campus personnel (*Electrical Supervisor*, *HVAC Technician*, *Estate Officer*) with quantified financial savings at ₹7.50/kWh.
-5. **Benchmarks Against Deep Learning:** Implements a sequence-based Long Short-Term Memory (`CITLSTMRegressor`, $R^2 = 0.9304$) in pure NumPy/Scikit-learn over a 24-hour diurnal sliding window.
+5. **Benchmarks Against Deep Learning:** Implements a sequence-based Long Short-Term Memory (`CITLSTMRegressor`, $R^2 = 0.9280$) in pure NumPy/Scikit-learn over a 24-hour diurnal sliding window.
 6. **Delivers Interactive 2D Dashboards:** Provides interactive telemetry plots, 24-hour diurnal load curves, building registry management, and forensic dossiers via React 19, TypeScript, Tailwind CSS, and Recharts.
+7. **Empowers Campus Sustainability & Decarbonization:** Computes Scope 2 electricity carbon emissions using official Central Electricity Authority (CEA) India v19 factors ($0.716\text{ kg CO}_2\text{e/kWh}$), normalizes facility energy intensity ($kWh/m^2$), tracks institutional targets, and maintains an empirical post-action savings verification ledger.
 
 ---
 
@@ -29,6 +30,7 @@ flowchart TD
         DataEntry["Manual Energy Entry (Instant ML Inference)"]
         AnomalyCenter["Anomaly Center (Forensic Investigation Dossier)"]
         RecsView["Operational Recommendations (Savings & Roles)"]
+        SustainView["Sustainability Intelligence (Emissions, Intensity, Targets, Audit)"]
         ModelDiag["Model Performance (RF vs LSTM Comparative Benchmark)"]
         SettingsView["System Settings (Threshold Calibration)"]
     end
@@ -39,6 +41,7 @@ flowchart TD
         API_Predict["/api/predictions (RF Inference)"]
         API_Anomalies["/api/anomalies (Dual-Method & Batch Scan)"]
         API_Recs["/api/recommendations"]
+        API_Sustain["/api/sustainability (Emissions, Targets, Verification)"]
         API_Dash["/api/dashboard (KPIs & 24h Timeseries)"]
         API_Models["/api/models (RF vs LSTM Comparison)"]
         API_Settings["/api/settings"]
@@ -46,7 +49,7 @@ flowchart TD
 
     subgraph ML ["Machine Learning & Preprocessing Layer"]
         Prep["Preprocessor (Cyclical Sin/Cos, Missingness Booleans)"]
-        RF["RandomForestRegressor v1.0 (R² = 0.9720)"]
+        RF["RandomForestRegressor v1.0 (R² = 0.9754)"]
         IsoForest["IsolationForest v1.0 (Outlier Intensity)"]
         LSTM["CITLSTMRegressor v1.0 (24h Sliding Window BPTT)"]
         Rules["Deterministic Physical Explainability Engine"]
@@ -54,7 +57,7 @@ flowchart TD
 
     subgraph Database ["Persistence Layer"]
         DB[(PostgreSQL / Transparent SQLite Fallback cit_energy.db)]
-        Alembic["Alembic Schema Version Migrations"]
+        Alembic["Alembic Migrations (14 Tables Normalized)"]
     end
 
     Frontend -->|REST JSON| Backend
@@ -108,7 +111,7 @@ npm run dev
 
 ## 🧪 Running the Test Suite
 
-The system includes a comprehensive pytest suite covering all 11 entities, data validation, preprocessing, Random Forest inference, Isolation Forest outlier detection, explanation rules, and REST endpoints:
+The system includes a comprehensive pytest suite covering all 14 entities across 12 test modules, data validation, preprocessing, Random Forest inference, Isolation Forest outlier detection, explanation rules, sustainability intelligence, and REST endpoints:
 
 ```bash
 # From the project root
@@ -117,7 +120,7 @@ The system includes a comprehensive pytest suite covering all 11 entities, data 
 
 Expected output:
 ```
-======================= 51 passed, 5 warnings in 19.45s ========================
+======================= 60 passed, 41 warnings in 20.52s =======================
 ```
 
 To verify frontend TypeScript compilation and production packaging:

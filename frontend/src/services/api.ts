@@ -4,7 +4,10 @@
 import type {
   Building, BuildingCreate, EnergyReading, EnergyReadingCreate,
   PaginatedResponse, Prediction, AnomalyEvent, Recommendation,
-  DashboardOverview, CSVImportResult, DashboardAnalyticsResponse
+  DashboardOverview, CSVImportResult, DashboardAnalyticsResponse,
+  SustainabilitySummary, BuildingSustainability, SustainabilityTrends,
+  CarbonFootprint, EmissionsFactorInfo, SustainabilityTarget,
+  SustainabilityTargetCreate, SustainabilityVerification, SustainabilityReport
 } from '../types'
 
 const BASE_URL = '/api'
@@ -142,4 +145,66 @@ export const api = {
 
   // Model Comparison
   getModelComparison: () => fetch(`${BASE_URL}/models/comparison`).then(res => handleResponse<any>(res)),
+
+  // Sustainability Module
+  getSustainabilitySummary: (startDate?: string, endDate?: string, buildingId?: number) => {
+    let url = `${BASE_URL}/sustainability/summary?`
+    if (startDate) url += `start_date=${encodeURIComponent(startDate)}&`
+    if (endDate) url += `end_date=${encodeURIComponent(endDate)}&`
+    if (buildingId) url += `building_id=${buildingId}&`
+    return fetch(url).then(res => handleResponse<SustainabilitySummary>(res))
+  },
+
+  getBuildingSustainability: (startDate?: string, endDate?: string) => {
+    let url = `${BASE_URL}/sustainability/buildings?`
+    if (startDate) url += `start_date=${encodeURIComponent(startDate)}&`
+    if (endDate) url += `end_date=${encodeURIComponent(endDate)}&`
+    return fetch(url).then(res => handleResponse<BuildingSustainability[]>(res))
+  },
+
+  getSustainabilityTrends: (buildingId?: number, startDate?: string, endDate?: string, granularity: 'daily' | 'hourly' = 'daily') => {
+    let url = `${BASE_URL}/sustainability/trends?granularity=${granularity}&`
+    if (buildingId) url += `building_id=${buildingId}&`
+    if (startDate) url += `start_date=${encodeURIComponent(startDate)}&`
+    if (endDate) url += `end_date=${encodeURIComponent(endDate)}&`
+    return fetch(url).then(res => handleResponse<SustainabilityTrends>(res))
+  },
+
+  getCarbonFootprint: (startDate?: string, endDate?: string) => {
+    let url = `${BASE_URL}/sustainability/emissions?`
+    if (startDate) url += `start_date=${encodeURIComponent(startDate)}&`
+    if (endDate) url += `end_date=${encodeURIComponent(endDate)}&`
+    return fetch(url).then(res => handleResponse<CarbonFootprint>(res))
+  },
+
+  getGridEmissionFactor: () => fetch(`${BASE_URL}/sustainability/factor`).then(res => handleResponse<EmissionsFactorInfo>(res)),
+
+  updateGridEmissionFactor: (data: Partial<EmissionsFactorInfo>) => fetch(`${BASE_URL}/sustainability/factor`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(data),
+  }).then(res => handleResponse<EmissionsFactorInfo>(res)),
+
+  getSustainabilityTargets: () => fetch(`${BASE_URL}/sustainability/targets`).then(res => handleResponse<SustainabilityTarget[]>(res)),
+
+  createSustainabilityTarget: (data: SustainabilityTargetCreate) => fetch(`${BASE_URL}/sustainability/targets`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(data),
+  }).then(res => handleResponse<SustainabilityTarget>(res)),
+
+  getSustainabilityVerifications: () => fetch(`${BASE_URL}/sustainability/verification`).then(res => handleResponse<SustainabilityVerification[]>(res)),
+
+  verifyRecommendationImpact: (recommendationId: number, data?: any) => fetch(`${BASE_URL}/sustainability/verify/${recommendationId}`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(data || {}),
+  }).then(res => handleResponse<SustainabilityVerification>(res)),
+
+  getSustainabilityReport: (startDate?: string, endDate?: string) => {
+    let url = `${BASE_URL}/sustainability/report?`
+    if (startDate) url += `start_date=${encodeURIComponent(startDate)}&`
+    if (endDate) url += `end_date=${encodeURIComponent(endDate)}&`
+    return fetch(url).then(res => handleResponse<SustainabilityReport>(res))
+  },
 }

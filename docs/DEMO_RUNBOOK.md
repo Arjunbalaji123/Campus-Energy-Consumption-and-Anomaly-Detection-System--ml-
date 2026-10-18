@@ -30,14 +30,16 @@ npm run dev
 
 ```mermaid
 flowchart LR
-    S1["1. Overview Dashboard"] --> S2["2. Building Registry"]
-    S2 --> S3["3. Manual Energy Entry"]
-    S3 --> S4["4. Instant ML Detection"]
-    S4 --> S5["5. Anomaly Center Dossier"]
+    S1["1. Overview"] --> S2["2. Buildings"]
+    S2 --> S3["3. Data Entry"]
+    S3 --> S4["4. ML Detection"]
+    S4 --> S5["5. Anomaly Dossier"]
     S5 --> S6["6. Recommendations"]
-    S6 --> S7["7. ML Diagnostics & LSTM"]
-    S7 --> S8["8. System Calibration"]
-    S8 --> S9["9. Live Pytest Execution"]
+    S6 --> S7["7. Sustainability"]
+    S7 --> S8["8. ML Diagnostics"]
+    S8 --> S9["9. System Calibration"]
+    S9 --> S10["10. Pytest Suite"]
+    S10 --> S11["11. Demo Scenarios"]
 ```
 
 ---
@@ -142,7 +144,22 @@ flowchart LR
 
 ---
 
-### Step 7: Machine Learning Diagnostics & Deep Learning Benchmark
+### Step 7: Campus Sustainability & Decarbonization Intelligence
+**URL:** `http://localhost:5173/sustainability`
+
+- **What to show:**
+  - **Sustainability Overview Cards:** Point out total campus carbon emissions (~177 t CO₂e), floor-area normalized energy intensity (kWh/m²), and verified savings.
+  - **Grid Factor Provenance:** Show the active Central Electricity Authority (CEA) India v19 baseline factor ($0.716\text{ kg CO}_2\text{e/kWh}$) calibrated for the Southern Regional Grid (Tamil Nadu).
+  - **Facility Intensity Benchmarks:** Show how buildings of different sizes and categories are normalized by gross floor area ($kWh/m^2$), allowing fair comparison between `CIT-IT` (dense cooling) and `CIT-ACAD` (lecture rooms).
+  - **Decarbonization Targets:** Display live progress bars tracking institutional reduction directives (e.g. "CIT 10% Campus Electricity Decarbonization 2026").
+  - **Empirical Savings Verification Ledger:** Demonstrate how resolved recommendations are audited by comparing post-action telemetry against baseline periods under equivalent conditions.
+  - **Official Audit Report Modal:** Click **"Audit Report"** to view and download the structured academic audit documentation with synthetic provenance disclaimers.
+- **What to say to the examiner:**
+  > *"Examiners, our system bridges machine-learning anomaly detection with environmental accounting. We translate technical kilowatt-hour telemetry into verified Scope 2 decarbonization metrics using official CEA India grid emission standards."*
+
+---
+
+### Step 8: Machine Learning Diagnostics & Deep Learning Benchmark
 **URL:** `http://localhost:5173/models`
 
 - **What to show:**
@@ -155,7 +172,7 @@ flowchart LR
 
 ---
 
-### Step 8: System Settings & Anomaly Threshold Calibration
+### Step 9: System Settings & Anomaly Threshold Calibration
 **URL:** `http://localhost:5173/settings`
 
 - **What to show:**
@@ -166,21 +183,21 @@ flowchart LR
 
 ---
 
-### Step 9: Live Test Suite Execution
+### Step 10: Live Test Suite Execution
 In your terminal, execute the full pytest suite before the examiners:
 ```bash
 ./backend/venv/bin/pytest -v
 ```
 - **Expected Result:**
   ```
-  ======================= 51 passed, 5 warnings in 19.45s ========================
+  ======================= 60 passed, 41 warnings in 20.52s =======================
   ```
 - **What to say to the examiner:**
-  > *"All 51 unit and integration tests pass across data schemas, feature engineering, Random Forest inference, Isolation Forest outlier detection, explanation rules, and REST API endpoints."*
+  > *"All 60 unit and integration tests pass across data schemas, feature engineering, Random Forest inference, Isolation Forest outlier detection, explanation rules, sustainability intelligence, and REST API endpoints."*
 
 ---
 
-### Step 10: Reproducible Synthetic Demo Scenarios (10 Test Cases)
+### Step 11: Reproducible Synthetic Demo Scenarios (10 Test Cases)
 Run the automated scenario test runner covering normal, warning, critical, missing-sensor, and breaker-trip conditions:
 ```bash
 PYTHONPATH=backend ./backend/venv/bin/python backend/ml/run_demo_scenarios.py

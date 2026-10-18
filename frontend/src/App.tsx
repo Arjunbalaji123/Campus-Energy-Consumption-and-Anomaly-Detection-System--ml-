@@ -6,6 +6,7 @@ import EnergyData from './pages/EnergyData'
 import { Predictions } from './pages/Predictions'
 import { AnomalyCenter } from './pages/AnomalyCenter'
 import { Recommendations } from './pages/Recommendations'
+import { Sustainability } from './pages/Sustainability'
 import { ModelPerformance } from './pages/ModelPerformance'
 import { Settings } from './pages/Settings'
 
@@ -25,6 +26,7 @@ export default function App() {
             <Route path="/predictions" element={<Predictions />} />
             <Route path="/anomalies" element={<AnomalyCenter />} />
             <Route path="/recommendations" element={<Recommendations />} />
+            <Route path="/sustainability" element={<Sustainability />} />
             <Route path="/models" element={<ModelPerformance />} />
             <Route path="/settings" element={<Settings />} />
             <Route path="*" element={<Navigate to="/" replace />} />

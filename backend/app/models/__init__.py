@@ -4,6 +4,9 @@ from app.models.building import Building, EquipmentProfile
 from app.models.reading import WeatherObservation, OccupancyRecord, EnergyReading
 from app.models.ml import ModelVersion, Prediction, ModelEvaluationRun
 from app.models.anomaly import AnomalyEvent, AnomalyExplanation, Recommendation
+from app.models.sustainability import (
+    SustainabilityConfig, SustainabilityTarget, SustainabilityVerification
+)
 
 __all__ = [
     "Base",
@@ -18,5 +21,8 @@ __all__ = [
     "AnomalyEvent",
     "AnomalyExplanation",
     "Recommendation",
+    "SustainabilityConfig",
+    "SustainabilityTarget",
+    "SustainabilityVerification",
 ]
 
