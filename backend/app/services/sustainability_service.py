@@ -25,7 +25,8 @@ from app.schemas.sustainability import (
     SustainabilityTrendPoint, SustainabilityTrendsResponse,
     CarbonFootprintResponse, SustainabilityTargetCreate, SustainabilityTargetUpdate,
     SustainabilityTargetResponse, SustainabilityVerificationCreate,
-    SustainabilityVerificationResponse, SustainabilityReportResponse
+    SustainabilityVerificationResponse, SustainabilityReportResponse,
+    EnergyWasteEventItem, WhatIfScenarioRequest, WhatIfScenarioResponse
 )
 
 # Standard CEA India Baseline Grid Emission Factor (CO2 Baseline Database v19)
@@ -741,3 +742,171 @@ def generate_sustainability_report(
             "Financial Tariff: Institutional rate modeled at ₹7.50 / kWh."
         ]
     )
+
+
+def get_energy_waste_events(
+    db: Session,
+    building_id: Optional[int] = None,
+    limit: int = 50
+) -> List[EnergyWasteEventItem]:
+    """Identify avoidable energy waste events from off-hours surges and excessive baseload."""
+    factor_info = get_emissions_factor_info(db)
+    factor = factor_info.emission_factor
+
+    # Query anomaly events joined with predictions and readings
+    q = (
+        db.query(AnomalyEvent, Prediction, EnergyReading, Building)
+        .join(EnergyReading, AnomalyEvent.reading_id == EnergyReading.id)
+        .join(Building, EnergyReading.building_id == Building.id)
+        .outerjoin(Prediction, AnomalyEvent.prediction_id == Prediction.id)
+        .filter(AnomalyEvent.severity.in_(["critical", "warning"]))
+    )
+
+    if building_id:
+        q = q.filter(EnergyReading.building_id == building_id)
+
+    events = q.order_by(EnergyReading.timestamp.desc()).limit(limit).all()
+    results = []
+
+    for a, p, r, b in events:
+        actual_kwh = float(r.energy_kwh)
+        pred_kwh = float(p.predicted_energy_kwh) if p else (actual_kwh * 0.7)
+        waste_kwh = max(0.0, round(actual_kwh - pred_kwh, 2))
+
+        # Classify waste pattern
+        hour = r.timestamp.hour
+        if hour < 6 or hour >= 21:
+            category = "after_hours_leakage"
+            explanation = f"Unscheduled late-night draw of {actual_kwh} kWh (expected ~{pred_kwh:.1f} kWh) during facility curfew."
+        elif r.day_type in ["weekend", "holiday"] or r.operating_status in ["closed", "reduced"]:
+            category = "excess_baseload"
+            explanation = f"Elevated baseline load of {actual_kwh} kWh during non-instructional {r.day_type} operational hours."
+        else:
+            category = "equipment_surge"
+            explanation = f"Abnormal machinery/HVAC consumption surge (+{waste_kwh} kWh above regression baseline)."
+
+        waste_cost = round(waste_kwh * DEFAULT_TARIFF_INR, 2)
+        waste_emissions = round(waste_kwh * factor, 2)
+
+        results.append(EnergyWasteEventItem(
+            id=a.id,
+            reading_id=r.id,
+            building_id=b.id,
+            building_name=b.name,
+            building_code=b.code,
+            timestamp=r.timestamp,
+            actual_kwh=actual_kwh,
+            expected_kwh=round(pred_kwh, 2),
+            waste_kwh=waste_kwh,
+            waste_cost_inr=waste_cost,
+            avoidable_emissions_kg_co2e=waste_emissions,
+            waste_category=category,
+            severity=a.severity,
+            confidence="high" if (a.detection_method == "dual") else "medium",
+            explanation=explanation,
+        ))
+
+    return results
+
+
+def simulate_what_if_scenario(
+    db: Session,
+    request: WhatIfScenarioRequest
+) -> WhatIfScenarioResponse:
+    """Execute physics-based hypothetical decarbonization and solar PV simulation."""
+    tariff = request.grid_tariff_inr or DEFAULT_TARIFF_INR
+    factor = request.grid_emission_factor or DEFAULT_GRID_FACTOR
+
+    # Query target building or campus average
+    if request.building_id:
+        b = db.query(Building).filter(Building.id == request.building_id).first()
+        b_name = b.name if b else "Selected Building"
+        avg_kwh = db.query(func.avg(EnergyReading.energy_kwh)).filter(EnergyReading.building_id == request.building_id).scalar() or 45.0
+    else:
+        b_name = "CIT Campus-Wide Aggregation"
+        avg_kwh = db.query(func.avg(EnergyReading.energy_kwh)).scalar() or 58.0
+
+    annual_baseline_kwh = round(float(avg_kwh) * 8760.0, 2)
+
+    if request.scenario_type == "solar_pv":
+        # Coimbatore Tamil Nadu: ~4.5 peak sun hours/day * 365 * 0.75 performance ratio = 1,231.8 kWh/kWp/year
+        capacity = request.solar_capacity_kw or 50.0
+        annual_gen_kwh = round(capacity * 1231.8, 2)
+        annual_savings_kwh = min(annual_baseline_kwh, annual_gen_kwh)
+        savings_pct = round((annual_savings_kwh / annual_baseline_kwh) * 100.0, 2)
+        cost_savings = round(annual_savings_kwh * tariff, 2)
+        avoided_co2 = round(annual_savings_kwh * factor, 2)
+        
+        # Rooftop PV Capex: ~Rs 45,000 / kWp in Tamil Nadu
+        capex = capacity * 45000.0
+        payback = round(capex / cost_savings, 1) if cost_savings > 0 else None
+
+        label = f"{capacity:.0f} kWp Rooftop Solar PV Generation"
+        assumptions = [
+            f"Solar Rooftop Array: {capacity:.0f} kWp monocrystalline PV panels.",
+            "Coimbatore Solar Resource: 4.5 peak sun hours/day with 75% performance ratio (PR).",
+            f"Specific Annual Yield: 1,232 kWh per kWp installed.",
+            f"Avoided Grid Electricity: Valued at commercial institutional tariff of ₹{tariff:.2f}/kWh.",
+            f"Estimated Capital Expenditure: ₹{capex:,.0f} (₹45,000/kWp)."
+        ]
+
+    elif request.scenario_type == "led_retrofit":
+        # Lighting accounts for ~25% of load; LED upgrade saves 35% of lighting power -> ~8.75% total savings
+        savings_pct = 8.75
+        annual_savings_kwh = round(annual_baseline_kwh * (savings_pct / 100.0), 2)
+        cost_savings = round(annual_savings_kwh * tariff, 2)
+        avoided_co2 = round(annual_savings_kwh * factor, 2)
+        payback = 1.8
+        label = "Smart LED Luminaire & Sensor Retrofit"
+        assumptions = [
+            "Baseline lighting load estimated at 25% of total facility consumption.",
+            "Upgrade from fluorescent T8/T5 fittings to high-efficacy LED tubes with PIR daylight sensors.",
+            "Expected reduction: 35% reduction in lighting circuits (~8.75% overall building load reduction).",
+            f"Simple Payback Horizon: ~{payback} years at ₹{tariff:.2f}/kWh."
+        ]
+
+    elif request.scenario_type == "hvac_optimization":
+        eff_pct = min(40.0, max(2.0, request.efficiency_improvement_pct or 12.0))
+        # HVAC is ~45% of campus power
+        savings_pct = round(0.45 * eff_pct, 2)
+        annual_savings_kwh = round(annual_baseline_kwh * (savings_pct / 100.0), 2)
+        cost_savings = round(annual_savings_kwh * tariff, 2)
+        avoided_co2 = round(annual_savings_kwh * factor, 2)
+        payback = 2.4
+        label = f"HVAC Chiller & Variable Frequency Drive (VFD) Optimization (+{eff_pct:.0f}%)"
+        assumptions = [
+            "Chilled water and split AC units comprise ~45% of observed thermal load.",
+            f"Implementation of chilled water temperature setpoint reset and VFD fan regulation achieves {eff_pct:.0f}% HVAC efficiency gain.",
+            f"Net facility energy conservation: {savings_pct:.2f}% annual kWh reduction.",
+            f"Avoided Grid Electricity: ₹{cost_savings:,.0f} per annum."
+        ]
+
+    else:
+        # Default: Curfew Standby Shutdown
+        savings_pct = min(25.0, max(1.0, request.efficiency_improvement_pct or 8.0))
+        annual_savings_kwh = round(annual_baseline_kwh * (savings_pct / 100.0), 2)
+        cost_savings = round(annual_savings_kwh * tariff, 2)
+        avoided_co2 = round(annual_savings_kwh * factor, 2)
+        payback = 0.5
+        label = f"Night-time Curfew Automated Plug-Load Shutdown ({savings_pct:.0f}%)"
+        assumptions = [
+            f"Automated smart relay curfew shuts down non-critical computer lab workstations and water dispensers after 21:00.",
+            f"Conserves approximately {savings_pct:.1f}% of overall parasitic baseload.",
+            f"Carbon abatement rate: {factor} kg CO2e/kWh (CEA Southern Grid)."
+        ]
+
+    return WhatIfScenarioResponse(
+        scenario_type=request.scenario_type,
+        simulation_label=label,
+        building_name=b_name,
+        baseline_annual_kwh=annual_baseline_kwh,
+        simulated_annual_savings_kwh=annual_savings_kwh,
+        simulated_savings_pct=savings_pct,
+        annual_cost_savings_inr=cost_savings,
+        annual_avoided_emissions_kg_co2e=avoided_co2,
+        annual_avoided_emissions_tonnes=round(avoided_co2 / 1000.0, 3),
+        estimated_payback_years=payback,
+        assumptions_summary=assumptions,
+        disclaimer="HYPOTHETICAL SIMULATION: Values are generated using regional physics and engineering models for academic decision support. Not a guarantee of financial return."
+    )
+

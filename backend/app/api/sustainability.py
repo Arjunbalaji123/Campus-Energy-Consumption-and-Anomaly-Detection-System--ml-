@@ -11,7 +11,8 @@ from app.schemas.sustainability import (
     EmissionsFactorInfo, EmissionsFactorUpdate,
     SustainabilityTargetCreate, SustainabilityTargetResponse,
     SustainabilityVerificationCreate, SustainabilityVerificationResponse,
-    SustainabilityReportResponse
+    SustainabilityReportResponse,
+    EnergyWasteEventItem, WhatIfScenarioRequest, WhatIfScenarioResponse
 )
 from app.services import sustainability_service
 
@@ -159,3 +160,23 @@ def get_sustainability_report(
     return sustainability_service.generate_sustainability_report(
         db, start_date=start_date, end_date=end_date
     )
+
+
+@router.get("/waste-events", response_model=List[EnergyWasteEventItem])
+def get_energy_waste_events(
+    building_id: Optional[int] = Query(None, description="Optional facility filter"),
+    limit: int = Query(50, le=200, description="Max observations"),
+    db: Session = Depends(get_db)
+):
+    """Detect and classify avoidable energy waste events from off-hours surges and excessive baseload."""
+    return sustainability_service.get_energy_waste_events(db, building_id=building_id, limit=limit)
+
+
+@router.post("/scenarios/what-if", response_model=WhatIfScenarioResponse)
+def run_what_if_scenario(
+    request: WhatIfScenarioRequest,
+    db: Session = Depends(get_db)
+):
+    """Execute physics-based hypothetical efficiency and solar PV decarbonization simulation."""
+    return sustainability_service.simulate_what_if_scenario(db, request)
+

@@ -7,7 +7,8 @@ import type {
   DashboardOverview, CSVImportResult, DashboardAnalyticsResponse,
   SustainabilitySummary, BuildingSustainability, SustainabilityTrends,
   CarbonFootprint, EmissionsFactorInfo, SustainabilityTarget,
-  SustainabilityTargetCreate, SustainabilityVerification, SustainabilityReport
+  SustainabilityTargetCreate, SustainabilityVerification, SustainabilityReport,
+  EnergyWasteEvent, WhatIfScenarioRequest, WhatIfScenarioResponse
 } from '../types'
 
 const BASE_URL = '/api'
@@ -207,4 +208,16 @@ export const api = {
     if (endDate) url += `end_date=${encodeURIComponent(endDate)}&`
     return fetch(url).then(res => handleResponse<SustainabilityReport>(res))
   },
+
+  getEnergyWasteEvents: (buildingId?: number, limit = 50) => {
+    let url = `${BASE_URL}/sustainability/waste-events?limit=${limit}`
+    if (buildingId) url += `&building_id=${buildingId}`
+    return fetch(url).then(res => handleResponse<EnergyWasteEvent[]>(res))
+  },
+
+  simulateWhatIfScenario: (data: WhatIfScenarioRequest) => fetch(`${BASE_URL}/sustainability/scenarios/what-if`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(data),
+  }).then(res => handleResponse<WhatIfScenarioResponse>(res)),
 }

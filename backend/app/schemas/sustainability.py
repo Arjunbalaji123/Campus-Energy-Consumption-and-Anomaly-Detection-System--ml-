@@ -179,3 +179,49 @@ class SustainabilityReportResponse(BaseModel):
     targets_status: List[SustainabilityTargetResponse]
     verified_savings_ledger: List[SustainabilityVerificationResponse]
     methodology_notes: List[str]
+
+
+class EnergyWasteEventItem(BaseModel):
+    """Identified avoidable energy waste observation."""
+    id: int
+    reading_id: int
+    building_id: int
+    building_name: str
+    building_code: str
+    timestamp: datetime
+    actual_kwh: float
+    expected_kwh: float
+    waste_kwh: float
+    waste_cost_inr: float
+    avoidable_emissions_kg_co2e: float
+    waste_category: str  # 'after_hours_leakage', 'excess_baseload', 'equipment_surge'
+    severity: str
+    confidence: str
+    explanation: str
+
+
+class WhatIfScenarioRequest(BaseModel):
+    """Input parameters for hypothetical sustainability interventions."""
+    building_id: Optional[int] = None
+    scenario_type: str = "solar_pv"  # 'solar_pv', 'led_retrofit', 'hvac_optimization', 'curfew_standby'
+    efficiency_improvement_pct: Optional[float] = 10.0
+    solar_capacity_kw: Optional[float] = 50.0
+    grid_tariff_inr: Optional[float] = 7.50
+    grid_emission_factor: Optional[float] = 0.716
+
+
+class WhatIfScenarioResponse(BaseModel):
+    """Simulated outcome of hypothetical decarbonization scenario."""
+    scenario_type: str
+    simulation_label: str
+    building_name: str
+    baseline_annual_kwh: float
+    simulated_annual_savings_kwh: float
+    simulated_savings_pct: float
+    annual_cost_savings_inr: float
+    annual_avoided_emissions_kg_co2e: float
+    annual_avoided_emissions_tonnes: float
+    estimated_payback_years: Optional[float] = None
+    assumptions_summary: List[str]
+    disclaimer: str
+

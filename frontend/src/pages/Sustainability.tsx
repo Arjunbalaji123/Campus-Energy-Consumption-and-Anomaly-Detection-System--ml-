@@ -4,7 +4,7 @@ import {
   Calendar, Building2, Trees, Car, Home,
   AlertCircle, FileText,
   Plus, RefreshCw, Info, Download, ShieldCheck,
-  ArrowUpRight, BarChart3
+  ArrowUpRight, BarChart3, Zap, Sun, Sliders, CheckCircle2
 } from 'lucide-react'
 import {
   AreaChart, Area, BarChart, Bar,
@@ -16,7 +16,8 @@ import type {
   SustainabilitySummary, BuildingSustainability,
   SustainabilityTrends, CarbonFootprint,
   SustainabilityTarget, SustainabilityVerification,
-  Building, SustainabilityReport
+  Building, SustainabilityReport,
+  EnergyWasteEvent, WhatIfScenarioRequest, WhatIfScenarioResponse
 } from '../types'
 
 export function Sustainability() {
@@ -29,6 +30,17 @@ export function Sustainability() {
   const [targets, setTargets] = useState<SustainabilityTarget[]>([])
   const [verifications, setVerifications] = useState<SustainabilityVerification[]>([])
   const [report, setReport] = useState<SustainabilityReport | null>(null)
+  const [wasteEvents, setWasteEvents] = useState<EnergyWasteEvent[]>([])
+
+  // What-If Simulation State
+  const [scenarioParams, setScenarioParams] = useState<WhatIfScenarioRequest>({
+    scenario_type: 'solar_pv',
+    solar_capacity_kw: 50.0,
+    efficiency_improvement_pct: 15.0,
+    building_id: undefined
+  })
+  const [scenarioResult, setScenarioResult] = useState<WhatIfScenarioResponse | null>(null)
+  const [scenarioLoading, setScenarioLoading] = useState<boolean>(false)
 
   // Filters
   const [selectedBuildingId, setSelectedBuildingId] = useState<number | undefined>(undefined)
@@ -38,7 +50,7 @@ export function Sustainability() {
   // UI Controls
   const [loading, setLoading] = useState<boolean>(true)
   const [error, setError] = useState<string | null>(null)
-  const [activeTab, setActiveTab] = useState<'overview' | 'buildings' | 'emissions' | 'targets' | 'verification'>('overview')
+  const [activeTab, setActiveTab] = useState<'overview' | 'buildings' | 'emissions' | 'waste' | 'simulation' | 'targets' | 'verification'>('overview')
   const [showTargetModal, setShowTargetModal] = useState<boolean>(false)
   const [showReportModal, setShowReportModal] = useState<boolean>(false)
   const [verifyingId, setVerifyingId] = useState<number | null>(null)
@@ -73,14 +85,15 @@ export function Sustainability() {
     const { start, end } = getDateBounds(dateRange)
 
     try {
-      const [sumRes, bldRes, trendRes, carbRes, tgtRes, verRes, allBldRes] = await Promise.all([
+      const [sumRes, bldRes, trendRes, carbRes, tgtRes, verRes, allBldRes, wasteRes] = await Promise.all([
         api.getSustainabilitySummary(start, end, selectedBuildingId),
         api.getBuildingSustainability(start, end),
         api.getSustainabilityTrends(selectedBuildingId, start, end, granularity),
         api.getCarbonFootprint(start, end),
         api.getSustainabilityTargets(),
         api.getSustainabilityVerifications(),
-        api.getBuildings(true)
+        api.getBuildings(true),
+        api.getEnergyWasteEvents(selectedBuildingId, 50)
       ])
 
       setSummary(sumRes)
@@ -90,6 +103,7 @@ export function Sustainability() {
       setTargets(tgtRes)
       setVerifications(verRes)
       setAllBuildings(allBldRes)
+      setWasteEvents(wasteRes)
     } catch (err: any) {
       console.error('Failed to load sustainability data:', err)
       setError(err.message || 'Failed to communicate with sustainability intelligence API.')
@@ -101,6 +115,26 @@ export function Sustainability() {
   useEffect(() => {
     loadData()
   }, [selectedBuildingId, granularity, dateRange])
+
+  // Run initial simulation if not yet simulated
+  useEffect(() => {
+    if (!scenarioResult) {
+      handleRunSimulation(scenarioParams)
+    }
+  }, [])
+
+  const handleRunSimulation = async (params: WhatIfScenarioRequest) => {
+    setScenarioLoading(true)
+    try {
+      const res = await api.simulateWhatIfScenario(params)
+      setScenarioResult(res)
+    } catch (err: any) {
+      console.error('Failed to execute simulation:', err)
+      alert('Simulation calculation failed: ' + (err.message || 'Unknown error'))
+    } finally {
+      setScenarioLoading(false)
+    }
+  }
 
   // Handle Verify Action
   const handleVerify = async (recId: number) => {
@@ -286,11 +320,13 @@ export function Sustainability() {
       </div>
 
       {/* Navigation Sub-Tabs */}
-      <div className="flex border-b border-slate-200 gap-6 text-sm font-medium">
+      <div className="flex border-b border-slate-200 gap-6 text-sm font-medium overflow-x-auto">
         {[
           { key: 'overview', label: 'Sustainability Overview', icon: Leaf },
           { key: 'buildings', label: 'Facility Intensity Benchmarks', icon: Building2 },
           { key: 'emissions', label: 'Carbon Footprint & Scope 2', icon: Trees },
+          { key: 'waste', label: 'Energy Waste Audit', icon: Zap },
+          { key: 'simulation', label: 'Renewable & What-If Simulator', icon: Sun },
           { key: 'targets', label: 'Decarbonization Targets', icon: Award },
           { key: 'verification', label: 'Verified Savings Ledger', icon: ShieldCheck }
         ].map(tab => {
@@ -781,6 +817,415 @@ export function Sustainability() {
                 <span className="text-slate-400 block text-[10px] uppercase font-semibold">Effective Horizon</span>
                 <span className="font-medium text-slate-800 mt-0.5 block">{carbonFootprint.emissions_factor.effective_date}</span>
               </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* TAB: ENERGY WASTE AUDIT */}
+      {activeTab === 'waste' && (
+        <div className="space-y-6">
+          {/* Summary Cards */}
+          {(() => {
+            const totalWasteKwh = wasteEvents.reduce((acc, ev) => acc + (ev.waste_kwh || 0), 0)
+            const totalWasteCost = wasteEvents.reduce((acc, ev) => acc + (ev.waste_cost_inr || 0), 0)
+            const totalWasteCo2 = wasteEvents.reduce((acc, ev) => acc + (ev.avoidable_emissions_kg_co2e || 0), 0)
+
+            return (
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                <div className="bg-white rounded-xl border border-slate-200 p-5 shadow-xs">
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs font-medium text-slate-500 uppercase tracking-wider">Identified Energy Waste</span>
+                    <div className="w-8 h-8 rounded-lg bg-amber-50 text-amber-600 flex items-center justify-center">
+                      <Zap className="w-4 h-4" />
+                    </div>
+                  </div>
+                  <div className="mt-3">
+                    <span className="text-2xl font-bold text-amber-900 font-mono">{totalWasteKwh.toFixed(1)}</span>
+                    <span className="text-xs text-slate-500 ml-1.5">kWh Avoidable</span>
+                  </div>
+                  <p className="text-[11px] text-amber-700 mt-1 font-medium">Non-productive energy loss</p>
+                </div>
+
+                <div className="bg-white rounded-xl border border-slate-200 p-5 shadow-xs">
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs font-medium text-slate-500 uppercase tracking-wider">Avoidable Spend</span>
+                    <div className="w-8 h-8 rounded-lg bg-rose-50 text-rose-600 flex items-center justify-center">
+                      <DollarSign className="w-4 h-4" />
+                    </div>
+                  </div>
+                  <div className="mt-3">
+                    <span className="text-2xl font-bold text-slate-900 font-mono">₹{totalWasteCost.toLocaleString(undefined, { maximumFractionDigits: 0 })}</span>
+                  </div>
+                  <p className="text-[11px] text-rose-600 mt-1 font-medium">At ₹7.50/kWh commercial tariff</p>
+                </div>
+
+                <div className="bg-white rounded-xl border border-slate-200 p-5 shadow-xs">
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs font-medium text-slate-500 uppercase tracking-wider">Avoidable Emissions</span>
+                    <div className="w-8 h-8 rounded-lg bg-emerald-50 text-emerald-600 flex items-center justify-center">
+                      <Trees className="w-4 h-4" />
+                    </div>
+                  </div>
+                  <div className="mt-3">
+                    <span className="text-2xl font-bold text-emerald-800 font-mono">{totalWasteCo2.toFixed(1)}</span>
+                    <span className="text-xs text-slate-500 ml-1.5">kg CO₂e</span>
+                  </div>
+                  <p className="text-[11px] text-emerald-700 mt-1 font-medium">CEA factor 0.716 kg/kWh</p>
+                </div>
+
+                <div className="bg-white rounded-xl border border-slate-200 p-5 shadow-xs">
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs font-medium text-slate-500 uppercase tracking-wider">Waste Incidents</span>
+                    <div className="w-8 h-8 rounded-lg bg-slate-100 text-slate-600 flex items-center justify-center">
+                      <AlertCircle className="w-4 h-4" />
+                    </div>
+                  </div>
+                  <div className="mt-3">
+                    <span className="text-2xl font-bold text-slate-900 font-mono">{wasteEvents.length}</span>
+                    <span className="text-xs text-slate-500 ml-1.5">Incidents Detected</span>
+                  </div>
+                  <p className="text-[11px] text-slate-500 mt-1 font-medium">Off-hours leakage & baseload drift</p>
+                </div>
+              </div>
+            )
+          })()}
+
+          {/* Waste Categories Classification Banner */}
+          <div className="bg-slate-50 rounded-xl border border-slate-200 p-4 text-xs text-slate-600 space-y-2">
+            <h4 className="font-bold text-slate-800 flex items-center gap-1.5">
+              <Info className="w-4 h-4 text-slate-500" />
+              Automated Waste Classification Methodology
+            </h4>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-3 pt-1">
+              <div className="p-2.5 bg-white rounded-lg border border-slate-200">
+                <span className="font-semibold text-amber-800 block">1. After-Hours Leakage</span>
+                <p className="text-[11px] text-slate-500 mt-0.5">
+                  Elevated energy draw during scheduled facility curfews (22:00–06:00 or weekends) exceeding operational standby threshold by &gt;20%.
+                </p>
+              </div>
+              <div className="p-2.5 bg-white rounded-lg border border-slate-200">
+                <span className="font-semibold text-blue-800 block">2. Excess Baseload Drift</span>
+                <p className="text-[11px] text-slate-500 mt-0.5">
+                  Persistent non-operational floor draw remaining uncharacteristically high, indicating dormant servers, uncurbed parasitic loads, or HVAC cycling.
+                </p>
+              </div>
+              <div className="p-2.5 bg-white rounded-lg border border-slate-200">
+                <span className="font-semibold text-rose-800 block">3. Equipment Surge</span>
+                <p className="text-[11px] text-slate-500 mt-0.5">
+                  Uncharacteristic power step-ups and load spikes exceeding baseline predictions by &gt;50%, signaling motor short-cycling or mechanical faults.
+                </p>
+              </div>
+            </div>
+          </div>
+
+          {/* Waste Events Table */}
+          <div className="bg-white rounded-xl border border-slate-200 shadow-xs overflow-hidden">
+            <div className="p-5 border-b border-slate-200 flex items-center justify-between">
+              <div>
+                <h3 className="text-base font-bold text-slate-900">Detected Energy Waste Incidents</h3>
+                <p className="text-xs text-slate-500 mt-0.5">
+                  Chronological telemetry audit pinpointing avoidable power consumption events
+                </p>
+              </div>
+              <span className="text-xs font-semibold px-2.5 py-1 bg-amber-50 text-amber-700 border border-amber-200 rounded-full">
+                {wasteEvents.length} Events Logged
+              </span>
+            </div>
+
+            <div className="overflow-x-auto">
+              <table className="w-full text-left text-xs">
+                <thead className="bg-slate-50 text-slate-600 font-semibold border-b border-slate-200 uppercase tracking-wider text-[10px]">
+                  <tr>
+                    <th className="py-3 px-4">Facility</th>
+                    <th className="py-3 px-4">Timestamp</th>
+                    <th className="py-3 px-4">Category</th>
+                    <th className="py-3 px-4 text-right">Actual / Expected</th>
+                    <th className="py-3 px-4 text-right">Waste (kWh)</th>
+                    <th className="py-3 px-4 text-right">Avoidable Spend</th>
+                    <th className="py-3 px-4 text-right">Avoidable CO₂e</th>
+                    <th className="py-3 px-4 text-center">Severity</th>
+                    <th className="py-3 px-4">Engineering Explanation</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-100">
+                  {wasteEvents.length === 0 ? (
+                    <tr>
+                      <td colSpan={9} className="py-8 text-center text-slate-400">
+                        No energy waste events identified within the current filter scope.
+                      </td>
+                    </tr>
+                  ) : (
+                    wasteEvents.map(ev => {
+                      const categoryLabels: Record<string, { label: string, color: string }> = {
+                        'after_hours_leakage': { label: 'After-Hours Leakage', color: 'bg-amber-50 text-amber-800 border-amber-200' },
+                        'excess_baseload': { label: 'Excess Baseload', color: 'bg-blue-50 text-blue-800 border-blue-200' },
+                        'equipment_surge': { label: 'Equipment Surge', color: 'bg-rose-50 text-rose-800 border-rose-200' }
+                      }
+                      const cat = categoryLabels[ev.waste_category] || { label: ev.waste_category, color: 'bg-slate-100 text-slate-700' }
+
+                      return (
+                        <tr key={ev.id} className="hover:bg-slate-50/75 transition-colors">
+                          <td className="py-3 px-4 font-semibold text-slate-900">
+                            {ev.building_name}
+                            <span className="block text-[10px] text-slate-400 font-normal">{ev.building_code}</span>
+                          </td>
+                          <td className="py-3 px-4 font-mono text-slate-600 text-[11px]">
+                            {new Date(ev.timestamp).toLocaleString(undefined, {
+                              month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit'
+                            })}
+                          </td>
+                          <td className="py-3 px-4">
+                            <span className={`px-2 py-0.5 rounded-full text-[10px] font-semibold border ${cat.color}`}>
+                              {cat.label}
+                            </span>
+                          </td>
+                          <td className="py-3 px-4 text-right font-mono text-slate-600">
+                            <span className="font-bold text-slate-900">{ev.actual_kwh}</span> / {ev.expected_kwh}
+                          </td>
+                          <td className="py-3 px-4 text-right font-mono font-bold text-amber-700">
+                            +{ev.waste_kwh} kWh
+                          </td>
+                          <td className="py-3 px-4 text-right font-mono font-semibold text-slate-800">
+                            ₹{ev.waste_cost_inr.toLocaleString()}
+                          </td>
+                          <td className="py-3 px-4 text-right font-mono text-emerald-800">
+                            {ev.avoidable_emissions_kg_co2e} kg
+                          </td>
+                          <td className="py-3 px-4 text-center">
+                            <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider ${
+                              ev.severity === 'critical' ? 'bg-rose-100 text-rose-800' : 'bg-amber-100 text-amber-800'
+                            }`}>
+                              {ev.severity}
+                            </span>
+                          </td>
+                          <td className="py-3 px-4 text-slate-600 text-[11px] max-w-xs truncate" title={ev.explanation}>
+                            {ev.explanation}
+                          </td>
+                        </tr>
+                      )
+                    })
+                  )}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* TAB: RENEWABLE & WHAT-IF SIMULATOR */}
+      {activeTab === 'simulation' && (
+        <div className="space-y-6">
+          {/* Header */}
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+            <div>
+              <h2 className="text-base font-bold text-slate-900">Renewable Energy & What-If Scenario Simulator</h2>
+              <p className="text-xs text-slate-500 mt-0.5">
+                Physical modeling calibrated for Coimbatore solar insolation and campus energy conservation measures
+              </p>
+            </div>
+            <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200 text-xs font-semibold">
+              <Sun className="w-3.5 h-3.5" />
+              Coimbatore Met Model (1,232 kWh/kWp/yr)
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            {/* Simulation Parameter Controls */}
+            <div className="bg-white rounded-xl border border-slate-200 p-5 shadow-xs space-y-4">
+              <h3 className="font-bold text-slate-900 text-sm flex items-center gap-2 border-b border-slate-100 pb-3">
+                <Sliders className="w-4 h-4 text-emerald-600" />
+                Intervention Parameters
+              </h3>
+
+              {/* Scenario Type Selection */}
+              <div>
+                <label className="block text-xs font-semibold text-slate-700 mb-1.5">Select Intervention Type</label>
+                <div className="space-y-2">
+                  {[
+                    { id: 'solar_pv', name: 'Rooftop Solar PV Installation', desc: 'Monocrystalline PV calibrated for Coimbatore insolation' },
+                    { id: 'hvac_optimization', name: 'HVAC VFD & Setpoint Optimization', desc: 'Chilled water reset & variable frequency drive scheduling' },
+                    { id: 'led_retrofit', name: 'Campus Smart LED Retrofit', desc: 'Replace CFL/fluorescent with daylight-harvesting smart LEDs' },
+                    { id: 'curfew_standby', name: 'Off-Hours Standby Isolation', desc: 'Automated night-time isolation of plug and idle IT loads' }
+                  ].map(sc => (
+                    <label
+                      key={sc.id}
+                      onClick={() => setScenarioParams({ ...scenarioParams, scenario_type: sc.id as any })}
+                      className={`block p-3 rounded-lg border text-xs cursor-pointer transition-all ${
+                        scenarioParams.scenario_type === sc.id
+                          ? 'border-emerald-600 bg-emerald-50/50 text-emerald-950 font-medium'
+                          : 'border-slate-200 hover:border-slate-300 text-slate-700'
+                      }`}
+                    >
+                      <div className="flex items-center justify-between">
+                        <span className="font-semibold">{sc.name}</span>
+                        {scenarioParams.scenario_type === sc.id && (
+                          <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+                        )}
+                      </div>
+                      <p className="text-[11px] text-slate-500 mt-1">{sc.desc}</p>
+                    </label>
+                  ))}
+                </div>
+              </div>
+
+              {/* Target Facility */}
+              <div>
+                <label className="block text-xs font-semibold text-slate-700 mb-1">Target Facility Scope</label>
+                <select
+                  value={scenarioParams.building_id || ''}
+                  onChange={(e) => setScenarioParams({
+                    ...scenarioParams,
+                    building_id: e.target.value ? Number(e.target.value) : undefined
+                  })}
+                  className="w-full px-3 py-2 border border-slate-200 rounded-lg text-xs font-medium text-slate-700 focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                >
+                  <option value="">Campus-Wide Scope (All Facilities)</option>
+                  {allBuildings.map(b => (
+                    <option key={b.id} value={b.id}>{b.name} ({b.code})</option>
+                  ))}
+                </select>
+              </div>
+
+              {/* Dynamic Inputs */}
+              {scenarioParams.scenario_type === 'solar_pv' ? (
+                <div>
+                  <div className="flex justify-between text-xs font-semibold text-slate-700 mb-1">
+                    <span>Solar PV Capacity (kWp)</span>
+                    <span className="font-mono text-emerald-700">{scenarioParams.solar_capacity_kw || 50} kWp</span>
+                  </div>
+                  <input
+                    type="range"
+                    min="10"
+                    max="300"
+                    step="5"
+                    value={scenarioParams.solar_capacity_kw || 50}
+                    onChange={(e) => setScenarioParams({ ...scenarioParams, solar_capacity_kw: Number(e.target.value) })}
+                    className="w-full accent-emerald-600"
+                  />
+                  <div className="flex justify-between text-[10px] text-slate-400 mt-0.5">
+                    <span>10 kWp</span>
+                    <span>150 kWp</span>
+                    <span>300 kWp</span>
+                  </div>
+                </div>
+              ) : (
+                <div>
+                  <div className="flex justify-between text-xs font-semibold text-slate-700 mb-1">
+                    <span>Projected Efficiency Gain (%)</span>
+                    <span className="font-mono text-emerald-700">{scenarioParams.efficiency_improvement_pct || 15}%</span>
+                  </div>
+                  <input
+                    type="range"
+                    min="5"
+                    max="45"
+                    step="1"
+                    value={scenarioParams.efficiency_improvement_pct || 15}
+                    onChange={(e) => setScenarioParams({ ...scenarioParams, efficiency_improvement_pct: Number(e.target.value) })}
+                    className="w-full accent-emerald-600"
+                  />
+                  <div className="flex justify-between text-[10px] text-slate-400 mt-0.5">
+                    <span>5% Conservative</span>
+                    <span>25% Moderate</span>
+                    <span>45% Aggressive</span>
+                  </div>
+                </div>
+              )}
+
+              {/* Run Button */}
+              <button
+                onClick={() => handleRunSimulation(scenarioParams)}
+                disabled={scenarioLoading}
+                className="w-full py-2.5 px-4 bg-emerald-600 text-white rounded-lg text-xs font-semibold hover:bg-emerald-700 shadow-xs transition-colors flex items-center justify-center gap-2 disabled:opacity-50 cursor-pointer"
+              >
+                <Sun className="w-4 h-4" />
+                {scenarioLoading ? 'Simulating Physics Models...' : 'Execute What-If Simulation'}
+              </button>
+            </div>
+
+            {/* Simulation Results Display */}
+            <div className="lg:col-span-2 space-y-4">
+              {scenarioResult ? (
+                <div className="space-y-4">
+                  {/* Results Header Card */}
+                  <div className="bg-white rounded-xl border border-slate-200 p-5 shadow-xs">
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-100 pb-3">
+                      <div>
+                        <span className="text-[10px] font-bold text-emerald-700 uppercase tracking-wider">Physics Simulation Result</span>
+                        <h3 className="text-base font-bold text-slate-900">{scenarioResult.simulation_label}</h3>
+                        <p className="text-xs text-slate-500">Scope: {scenarioResult.building_name}</p>
+                      </div>
+                      <span className="text-xs font-semibold px-2.5 py-1 bg-emerald-50 text-emerald-700 border border-emerald-200 rounded-full self-start sm:self-auto">
+                        -{scenarioResult.simulated_savings_pct}% Annual Energy Reduction
+                      </span>
+                    </div>
+
+                    {/* Metric Cards Grid */}
+                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 pt-4">
+                      <div className="p-3 bg-slate-50 rounded-lg border border-slate-100">
+                        <span className="text-slate-500 block text-[10px] uppercase font-semibold">Annual Energy Offset</span>
+                        <span className="text-base font-bold text-slate-900 font-mono mt-0.5 block">
+                          {scenarioResult.simulated_annual_savings_kwh.toLocaleString()}
+                        </span>
+                        <span className="text-[10px] text-slate-500">kWh / year</span>
+                      </div>
+
+                      <div className="p-3 bg-emerald-50/60 rounded-lg border border-emerald-100">
+                        <span className="text-emerald-700 block text-[10px] uppercase font-semibold">Annual Cost Savings</span>
+                        <span className="text-base font-bold text-emerald-900 font-mono mt-0.5 block">
+                          ₹{scenarioResult.annual_cost_savings_inr.toLocaleString()}
+                        </span>
+                        <span className="text-[10px] text-emerald-700">₹7.50 / kWh tariff</span>
+                      </div>
+
+                      <div className="p-3 bg-teal-50/60 rounded-lg border border-teal-100">
+                        <span className="text-teal-700 block text-[10px] uppercase font-semibold">Avoided Emissions</span>
+                        <span className="text-base font-bold text-teal-900 font-mono mt-0.5 block">
+                          {scenarioResult.annual_avoided_emissions_tonnes}
+                        </span>
+                        <span className="text-[10px] text-teal-700">t CO₂e / year</span>
+                      </div>
+
+                      <div className="p-3 bg-indigo-50/60 rounded-lg border border-indigo-100">
+                        <span className="text-indigo-700 block text-[10px] uppercase font-semibold">Simple Payback</span>
+                        <span className="text-base font-bold text-indigo-900 font-mono mt-0.5 block">
+                          {scenarioResult.estimated_payback_years ? `${scenarioResult.estimated_payback_years} Yrs` : 'Immediate'}
+                        </span>
+                        <span className="text-[10px] text-indigo-700">Capital ROI</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Assumptions & Physical Principles */}
+                  <div className="bg-white rounded-xl border border-slate-200 p-5 shadow-xs">
+                    <h4 className="font-bold text-slate-900 text-xs uppercase tracking-wider mb-3">
+                      Physical Model Parameters & Methodology Principles:
+                    </h4>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs">
+                      {scenarioResult.assumptions_summary.map((asm, idx) => (
+                        <div key={idx} className="flex items-start gap-2 p-2.5 rounded-lg bg-slate-50 border border-slate-100 text-slate-700">
+                          <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600 shrink-0 mt-0.5" />
+                          <span className="leading-relaxed text-[11px]">{asm}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Mandatory Academic Disclaimer */}
+                  <div className="p-4 rounded-xl bg-amber-50 border border-amber-200 text-xs text-amber-900 flex items-start gap-3">
+                    <Info className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
+                    <div>
+                      <span className="font-bold text-amber-950 block">Analytical Simulation Disclaimer</span>
+                      <p className="text-amber-800 text-[11px] mt-0.5 leading-relaxed">{scenarioResult.disclaimer}</p>
+                    </div>
+                  </div>
+                </div>
+              ) : (
+                <div className="bg-white rounded-xl border border-slate-200 p-12 text-center text-slate-400">
+                  <Sun className="w-8 h-8 text-slate-300 mx-auto mb-2" />
+                  <p className="text-xs">Select parameters and click "Execute What-If Simulation" to model campus decarbonization.</p>
+                </div>
+              )}
             </div>
           </div>
         </div>

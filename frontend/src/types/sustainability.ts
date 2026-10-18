@@ -158,3 +158,46 @@ export interface SustainabilityReport {
   methodology_notes: string[]
 }
 
+export interface EnergyWasteEvent {
+  id: number
+  reading_id: number
+  building_id: number
+  building_name: string
+  building_code: string
+  timestamp: string
+  actual_kwh: number
+  expected_kwh: number
+  waste_kwh: number
+  waste_cost_inr: number
+  avoidable_emissions_kg_co2e: number
+  waste_category: 'after_hours_leakage' | 'excess_baseload' | 'equipment_surge'
+  severity: 'critical' | 'warning'
+  confidence: 'high' | 'medium' | 'low'
+  explanation: string
+}
+
+export interface WhatIfScenarioRequest {
+  building_id?: number
+  scenario_type: 'solar_pv' | 'led_retrofit' | 'hvac_optimization' | 'curfew_standby'
+  efficiency_improvement_pct?: number
+  solar_capacity_kw?: number
+  grid_tariff_inr?: number
+  grid_emission_factor?: number
+}
+
+export interface WhatIfScenarioResponse {
+  scenario_type: string
+  simulation_label: string
+  building_name: string
+  baseline_annual_kwh: number
+  simulated_annual_savings_kwh: number
+  simulated_savings_pct: number
+  annual_cost_savings_inr: number
+  annual_avoided_emissions_kg_co2e: number
+  annual_avoided_emissions_tonnes: number
+  estimated_payback_years?: number
+  assumptions_summary: string[]
+  disclaimer: string
+}
+
+

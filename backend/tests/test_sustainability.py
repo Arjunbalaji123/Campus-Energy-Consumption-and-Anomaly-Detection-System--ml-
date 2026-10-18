@@ -230,3 +230,50 @@ def test_sustainability_settings_and_recommendations_endpoints():
         assert "estimated_emissions_reduction_kg_co2e" in first
         assert "estimated_cost_reduction_inr" in first
 
+
+def test_energy_waste_events_detection():
+    """Verify avoidable energy waste detection and categorization."""
+    res = client.get("/api/sustainability/waste-events?limit=20")
+    assert res.status_code == 200
+    events = res.json()
+    assert isinstance(events, list)
+    if len(events) > 0:
+        ev = events[0]
+        assert "waste_kwh" in ev
+        assert "waste_cost_inr" in ev
+        assert "avoidable_emissions_kg_co2e" in ev
+        assert ev["waste_category"] in ["after_hours_leakage", "excess_baseload", "equipment_surge"]
+        assert ev["severity"] in ["critical", "warning"]
+
+
+def test_what_if_scenario_simulation():
+    """Verify physics-based solar and HVAC decarbonization simulations."""
+    # 1. Test Solar PV Scenario
+    solar_req = {
+        "scenario_type": "solar_pv",
+        "solar_capacity_kw": 60.0,
+        "grid_tariff_inr": 7.50,
+        "grid_emission_factor": 0.716
+    }
+    res_solar = client.post("/api/sustainability/scenarios/what-if", json=solar_req)
+    assert res_solar.status_code == 200
+    sim_solar = res_solar.json()
+    assert sim_solar["scenario_type"] == "solar_pv"
+    assert sim_solar["simulated_annual_savings_kwh"] > 0
+    assert sim_solar["annual_cost_savings_inr"] > 0
+    assert sim_solar["annual_avoided_emissions_kg_co2e"] > 0
+    assert len(sim_solar["assumptions_summary"]) >= 3
+    assert "HYPOTHETICAL SIMULATION" in sim_solar["disclaimer"]
+
+    # 2. Test HVAC Optimization Scenario
+    hvac_req = {
+        "scenario_type": "hvac_optimization",
+        "efficiency_improvement_pct": 15.0
+    }
+    res_hvac = client.post("/api/sustainability/scenarios/what-if", json=hvac_req)
+    assert res_hvac.status_code == 200
+    sim_hvac = res_hvac.json()
+    assert sim_hvac["scenario_type"] == "hvac_optimization"
+    assert sim_hvac["simulated_savings_pct"] > 0
+
+
