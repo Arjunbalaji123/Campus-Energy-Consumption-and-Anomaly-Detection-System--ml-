@@ -212,3 +212,21 @@ def test_sustainability_report_generation():
     assert "methodology_notes" in report
     assert len(report["methodology_notes"]) >= 3
 
+
+def test_sustainability_settings_and_recommendations_endpoints():
+    """Verify /settings alias and /recommendations sustainability endpoint."""
+    # 1. Test /sustainability/settings GET
+    res_set = client.get("/api/sustainability/settings")
+    assert res_set.status_code == 200
+    assert "emission_factor" in res_set.json()
+
+    # 2. Test /sustainability/recommendations GET
+    res_rec = client.get("/api/sustainability/recommendations")
+    assert res_rec.status_code == 200
+    recs = res_rec.json()
+    assert isinstance(recs, list)
+    if len(recs) > 0:
+        first = recs[0]
+        assert "estimated_emissions_reduction_kg_co2e" in first
+        assert "estimated_cost_reduction_inr" in first
+

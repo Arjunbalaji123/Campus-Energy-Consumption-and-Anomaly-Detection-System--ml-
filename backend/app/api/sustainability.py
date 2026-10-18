@@ -70,18 +70,52 @@ def get_carbon_footprint(
 
 
 @router.get("/factor", response_model=EmissionsFactorInfo)
+@router.get("/settings", response_model=EmissionsFactorInfo)
 def get_grid_emission_factor(db: Session = Depends(get_db)):
     """Retrieve active grid emission factor configuration and provenance."""
     return sustainability_service.get_emissions_factor_info(db)
 
 
 @router.put("/factor", response_model=EmissionsFactorInfo)
+@router.put("/settings", response_model=EmissionsFactorInfo)
 def update_grid_emission_factor(
     update_data: EmissionsFactorUpdate,
     db: Session = Depends(get_db)
 ):
     """Configure regional grid emission factor (e.g. CEA India updates)."""
     return sustainability_service.update_emissions_factor(db, update_data)
+
+
+@router.get("/recommendations")
+def get_sustainability_recommendations(
+    building_id: Optional[int] = Query(None, description="Optional facility filter"),
+    db: Session = Depends(get_db)
+):
+    """Retrieve actionable sustainability and energy-efficiency directives."""
+    from app.models.anomaly import Recommendation, AnomalyEvent
+    from app.models.reading import EnergyReading
+    q = db.query(Recommendation).join(AnomalyEvent, Recommendation.anomaly_event_id == AnomalyEvent.id).join(EnergyReading, AnomalyEvent.reading_id == EnergyReading.id)
+    if building_id:
+        q = q.filter(EnergyReading.building_id == building_id)
+    recs = q.order_by(Recommendation.id.desc()).limit(50).all()
+    results = []
+    for r in recs:
+        results.append({
+            "id": r.id,
+            "anomaly_event_id": r.anomaly_event_id,
+            "title": r.title,
+            "priority": r.priority,
+            "supporting_evidence": r.supporting_evidence,
+            "recommended_action": r.recommended_action,
+            "responsible_role": r.responsible_role,
+            "follow_up_verification": r.follow_up_verification,
+            "status": r.status,
+            "estimated_savings_kwh": r.estimated_savings_kwh,
+            "estimated_cost_reduction_inr": round((r.estimated_savings_kwh or 0.0) * 7.50, 2),
+            "estimated_emissions_reduction_kg_co2e": round((r.estimated_savings_kwh or 0.0) * 0.716, 2),
+            "created_at": r.created_at,
+        })
+    return results
 
 
 @router.get("/targets", response_model=List[SustainabilityTargetResponse])
